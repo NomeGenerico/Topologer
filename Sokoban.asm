@@ -21,6 +21,9 @@ main:
 	loadn r0, #38
 	store posPlayer, r0
 
+	loadn r0, #156
+	store posBox, r0
+
 	
 	mainLoop:
 	
@@ -59,58 +62,59 @@ movePlayer:
 	;if a
 		loadn r2, 'a' 
 		cmp r3, r2
-		jeq mvleft
+		jeq Playermvleft
 	
 	;if d
 		loadn r2, 'd' 
 		cmp r3, r2
-		jeq mvright
+		jeq Playermvright
 
 	;if w
 		loadn r2, 'w' 
 		cmp r3, r2
-		jeq mvup
+		jeq Playermvup
 
 	;if s
 		loadn r2, 's' 
 		cmp r3, r2
-		jeq mvdown
+		jeq Playermvdown
 
 	;else
 		jmp endMovePlayer
 
-	mvleft:
-		loadn r2, #1
-		sub r0, r0, r2
+	Playermvleft:
+		
+		call mvleft
 
 		loadn r2, #3
-		store moveDirection, r2
+		store playerMoveDirection, r2
 		
 		jmp callMovementTopologyPlayer
 
-	mvright:
+	Playermvright:
+
+		call mvright
+
 		loadn r2, #1
-		add r0, r0, r2
+		store playerMoveDirection, r2
 
-		store moveDirection, r2
-		
 		jmp callMovementTopologyPlayer
 
-	mvup:
-		loadn r2, #40
-		sub r0, r0, r2
+	Playermvup:
+
+		call mvup
 
 		loadn r2, #2
-		store moveDirection, r2
+		store playerMoveDirection, r2
 
 		jmp callMovementTopologyPlayer
 	
-	mvdown:
-		loadn r2, #40
-		add r0, r0, r2
+	Playermvdown:
+		
+		call mvdown
 
 		loadn r2, #4
-		store moveDirection, r2
+		store playerMoveDirection, r2
 
 		jmp callMovementTopologyPlayer
 
@@ -136,47 +140,68 @@ checkPushMovement:
 	push r3
 
 
-	load r0, posPlayer
-	load r1, posBox
+	load r0, posBox
+	load r1, posPlayer
 	load r2, playerMoveDirection
+
+	store prevposBox, r0
 
 	; if player position == box position, push box
 	cmp r0, r1
-	jne skip
+	jne endboxmv
 	
-	;if 1
-		loadn r2, 'a' 
+	;if r2 = 3
+		loadn r3, #3
 		cmp r3, r2
-		jeq mvleft
+		jeq boxmvleft
 	
-	;if 2
-		loadn r2, 'd' 
+	;if r2 = 1
+		loadn r3, #1 
 		cmp r3, r2
-		jeq mvright
+		jeq boxmvright
 
-	;if 3
-		loadn r2, 'w' 
+	;if r2 = 2
+		loadn r3, #2
 		cmp r3, r2
-		jeq mvup
+		jeq boxmvup
 
-	;if 4
-		loadn r2, 's' 
+	;if r2 = 4
+		loadn r3, #4 
 		cmp r3, r2
-		jeq mvdown
+		jeq boxmvdown
+	
+	boxmvright:
+		call mvright
+		store posBox, r0
+		jmp boxmvtopology
+		
+
+	boxmvup:
+		call mvup
+		store posBox, r0
+		jmp boxmvtopology
+
+	boxmvleft:
+		call mvleft
+		store posBox, r0
+		jmp boxmvtopology
+
+	boxmvdown:
+		call mvdown
+		store posBox, r0
+		jmp boxmvtopology
 
 
+	boxmvtopology:
+
+	load r1, prevposBox
+
+	call mvTopology
+
+	store posBox, r0
 
 
-
-
-	skip:
-
-
-
-
-
-
-
+	endboxmv:
 
 
 
@@ -184,10 +209,65 @@ checkPushMovement:
 	pop r2
 	pop r1
 	pop r0
+	rts
 
+mvright:
+	
+	; takes and operates on r0
 
+	push r2
+	loadn r2, #1
+	add r0, r0, r2
 
+	store playerMoveDirection, r2
+	
+	pop r2
 
+	rts
+
+mvleft:
+	
+	; takes and operates on r0
+
+	push r2
+	loadn r2, #1
+	sub r0, r0, r2
+
+	store playerMoveDirection, r2
+	
+	pop r2
+
+	rts
+
+mvup:
+	; takes and operates on r0
+
+	push r2
+
+	loadn r2, #40
+	sub r0, r0, r2
+
+	loadn r2, #2
+	store playerMoveDirection, r2
+	
+	pop r2
+
+	rts
+
+mvdown:
+	; takes and operates on r0
+
+	push r2
+
+	loadn r2, #40
+	add r0, r0, r2
+
+	loadn r2, #2
+	store playerMoveDirection, r2
+	
+	pop r2
+		
+	rts
 
 mvTopology:
 		
