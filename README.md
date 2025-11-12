@@ -5,3 +5,6 @@ More info can be found can be found [here](https://github.com/simoesusp/Processa
 This game is a sokoban, a type of puzzle game which you solve chalendges by primarely pushing objects around.
 
 The twist of this game will be the exploration of the topologies of diferent 2d manifolds, in which the puzles will reside. 
+
+
+Curently Remaking a bunch of stuff, will not work properly
