@@ -263,8 +263,6 @@ checkPushMovement:
 
 		sub r2, r0, r1 ; playerMoveDirection ; can be infered from r0 and r1
 		; r2 will become a movent direction
-
-		mov r7, r2
 	
 		;if r2 = 3
 			loadn r3, #65535
@@ -286,6 +284,31 @@ checkPushMovement:
 			cmp r3, r2
 			jeq boxmvdown
 		
+
+		; loadn r7, #2
+		; code will reach here if the boxes cross the topology bounderies
+
+		; torus specific fix; will need to be moved to a function with a pointer in 
+		; current topology manager or solver
+			mov r7, r2
+			
+			loadn r3, #65497
+			cmp r3, r2
+			jeq boxmvright
+
+			loadn r3, #64376
+			cmp r3, r2
+			jeq boxmvdown
+
+			loadn r3, #39
+			cmp r3, r2
+			jeq boxmvleft
+
+			loadn r3, #1160
+			cmp r3, r2
+			jeq boxmvup
+
+
 		jmp endboxmv		
 
 		boxmvright:
