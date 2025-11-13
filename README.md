@@ -6,5 +6,27 @@ This game is a sokoban, a type of puzzle game which you solve chalendges by prim
 
 The twist of this game will be the exploration of the topologies of diferent 2d manifolds, in which the puzles will reside. 
 
+The ground work is going well. 
 
-Curently Remaking a bunch of stuff, will not work properly
+What is Done already:
+
+- Player Movement
+- Layered Rendering
+- Dirty Rendering
+- Easy way to load new levels via the CurentLayer Pointers
+- Pushing Boxes
+- Pushing Multiple Boxes
+- Torus Topology - Pacman like
+
+
+Big ToDo's: 
+
+- UI System, alows for the stacking of ui elements, and interaction with the top-most one.
+- Other Objects like walls, buttons, doors, etc...
+- Making topology variable and configurable. Curently Stuck on a toroidal surface
+- Undo Function
+- Puzzles
+
+
+
+
