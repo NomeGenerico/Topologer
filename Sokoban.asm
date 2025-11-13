@@ -4,33 +4,32 @@ jmp main
 posPlayer: var#1
 prevposPlayer: var#1
 originalposPlayer: var#1
+
 playerMoveDirection: var#1
+MoveBlocked : var#1
+
 playerOrientation: var#1
-
-
-posBox: var#1
-prevposBox: var#1
-
 
 cstagetopology: var#1
 curentStage:  var#1
 curentTopology: var#1
 
 
-currentUILayer: string " "
-currentPropLayer: string " "
-currentBackgroundLayer: string " "
+currentUILayer: var#1
+currentPropLayer: var#1
+currentBackgroundLayer: var#1
 
 
 currentScreenIndexesChanged : string "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                "
-loadn r0, "\0"
-loadn r1, #currentScreenIndexesChanged
-loadi r1, r0
-; Makes first character the end string
-currentScreenIndexesChangedIndex: var#0
-; mustalways pont to /0
 
+currentScreenIndexesChangedIndex: var#0
 ; This actes like a stack, but not realy
+
+; Doenst actualy need the /0, the printing function can just see if it it reached:
+; currentScreenIndexesChangedIndex
+
+; ToDo: Remove unused functionality 
+; Dificulty: Easy
 
 
 uiLayerColor: var#1
@@ -39,38 +38,55 @@ backgroundLayerColor: var#1
 currentPrintingColor: var#1
 
 
-Level1Props : string "                                                                                                                                                                                                                                                                                                                                                                                       @@@@@@@                                 @     @                                 @     @                                 @  A  @                                 @     @                                 @     @                                 @@@@@@@                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  "
+Level1Props : string "                                                                                                                                                                                                                                                                                                                                                                                       @@@@@@@                                 @     @                                 @     @                                 @     @                                 @     @                                 @     @                                 @@@@@@@                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  "
 Level1Background : string "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                "
 
 
 main:
 
 	;SetUp
-	loadn r0, #38
-	store posPlayer, r0
+		loadn r0, #498
+		store posPlayer, r0
 
-	loadn r0, #156
-	store posBox, r0
+		; positions player in level
+			loadn r1, #Level1Props  ; must be changed to curent layer later
+			add r2, r1, r0
+			loadn r0, "A"
+
+			storei r2, r0
+
+		; Initialize the changed index pointer to start of buffer
+   		 loadn r0, #currentScreenIndexesChanged
+   		 store currentScreenIndexesChangedIndex, r0
+
+		; sets current Layers
 	
+			;loadn r1, #Level1Props
+			store currentPropLayer, r1
 
+			loadn r1, #Level1Background
+			store currentBackgroundLayer, r1
+
+	;Variables for first print
 	loadn r0, #0
-	loadn r1, #Level1Props
+	loadn r1, currentPropLayer
 	loadn r2, #0
 	
+	; first print. All subsequent prints must be made in render loop
 	call ImprimeStr
-
 
 
 	mainLoop:
 	
-	;Movement
-	call movePlayer
+		;Movement
+			call movePlayer  ; must make movePlayer call checkPushMove
+						     ; To alow current code to work
 
+			;call checkPushMovement
 
-	call checkPushMovement
+		;RenderLoop:
+			call render
 
-	;RenderLoop:
-	call render
 
 	jmp mainLoop
 
@@ -155,10 +171,23 @@ movePlayer:
 
 
 	callMovementTopologyPlayer:		
-	call mvTopology
+		call mvTopology
+
+	; CheckPush or block
+		;takes r0 = new pos
+		load r1, prevposPlayer; takes r1 = prev pos
+		call checkPushMovement	
+
 
 	endMovePlayer:
 	store posPlayer, r0 
+	
+	;takes r0 = new pos
+	load r1, prevposPlayer; takes r1 = prev pos
+
+	call MoveInMemory ; 
+	
+	call setIndexChanged
 
 	pop r3
 	pop r2
@@ -167,79 +196,142 @@ movePlayer:
 
 	RTS
 
+MoveInMemory:
+
+	;Takes r0 and r1 as inputs for positions; 
+	;you should be getting used to this by now
+	
+	;Also can take another register or variable like curent memory or smth. 
+	;not needed now
+
+	push r2  ;PropLayer pointed by curentPropLayer
+	push r3
+	push r4
+	push r5
+
+	load r2, currentPropLayer
+
+	add r3, r1, r2 ; Index In layer of r1
+	
+	; r4
+	loadi r4, r3 ; character in r1 of Layer
+	
+	loadn r5, # " "
+	storei r3, r5     ; overide r1 with " "
+	
+	add r3, r0, r2 
+	storei r3, r4 ; stores r4 into r0 of layer
+
+	; r0 now contains what was in r1, while r1 is now " ".
+
+	; Make sure to aways apply this from the last moved object otherwise 
+	; you will thanos snap your level
+
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+
+	rts
+	
+
 checkPushMovement:
 	
-	push r0
-	push r1
+	push r0 ;stores callers pos
+	push r1 ;stores callers prevpos
 	push r2
 	push r3
+	push r5
+	push r4
+	push r6
 
 
-	load r0, posBox
-	load r1, posPlayer
-	load r2, playerMoveDirection
+	;r0, new position
+	;r1, previous position
 
-	store prevposBox, r0
 
-	; if player position == box position, push box
-	cmp r0, r1
+	; if new position has box, push box
+	
+	load r6, currentPropLayer
+	add r2, r6, r0 ; memory addres of r0 position in propLayer
+
+	loadi r4, r2
+	loadn r3, "@"
+	cmp r4, r3
+
 	jne endboxmv
-	
-	;if r2 = 3
-		loadn r3, #3
-		cmp r3, r2
-		jeq boxmvleft
-	
-	;if r2 = 1
-		loadn r3, #1 
-		cmp r3, r2
-		jeq boxmvright
 
-	;if r2 = 2
-		loadn r3, #2
-		cmp r3, r2
-		jeq boxmvup
+		sub r2, r0, r1 ; playerMoveDirection ; can be infered from r0 and r1
+		; r2 will become a movent direction
 
-	;if r2 = 4
-		loadn r3, #4 
-		cmp r3, r2
-		jeq boxmvdown
+		mov r7, r2
 	
-	boxmvright:
-		call mvright
-		store posBox, r0
-		jmp boxmvtopology
+		;if r2 = 3
+			loadn r3, #65535
+			cmp r3, r2
+			jeq boxmvleft
+	
+		;if r2 = 1
+			loadn r3, #1 
+			cmp r3, r2
+			jeq boxmvright
+
+		;if r2 = 2
+			loadn r3, #65496
+			cmp r3, r2
+			jeq boxmvup
+
+		;if r2 = 4
+			loadn r3, #40
+			cmp r3, r2
+			jeq boxmvdown
 		
+		jmp endboxmv		
 
-	boxmvup:
-		call mvup
-		store posBox, r0
-		jmp boxmvtopology
+		boxmvright:
+			mov r5, r0
+			call mvright ; puts new position in r0
+			jmp boxmvtopology	
 
-	boxmvleft:
-		call mvleft
-		store posBox, r0
-		jmp boxmvtopology
+		boxmvup:
+			mov r5, r0
+			call mvup ; puts new position in r0
+			jmp boxmvtopology
 
-	boxmvdown:
-		call mvdown
-		store posBox, r0
-		jmp boxmvtopology
+		boxmvleft:
+			mov r5, r0
+			call mvleft ; puts new position in r0
+			jmp boxmvtopology
+
+		boxmvdown:
+			mov r5, r0
+			call mvdown ; puts new position in r0
+			jmp boxmvtopology
 
 
-	boxmvtopology:
+		boxmvtopology:
+			mov r1, r5
+			call mvTopology ; puts new position in r0
 
-	load r1, prevposBox
-
-	call mvTopology
-
-	store posBox, r0
-
+		;r0, is the new position of the box, we must check if it is valid
+		;r1 is the previous position of the box
+		
+		call checkPushMovement
+		
+		
+		;if valid
+		; MoveInMemory
+		call MoveInMemory
+	
+		call setIndexChanged
 
 	endboxmv:
+	
 
-
-
+	
+	pop r6
+	pop r5
+	pop r4
 	pop r3
 	pop r2
 	pop r1
@@ -409,10 +501,11 @@ mvTopology:
 
 		endmvTopoplogy:
 
-		; r0, new positon
+		; r0, new positon0,
+
 		; r1, previous position still
 
-		call setIndexChanged
+		;call setIndexChanged
 
 		; marks what must be re-rendered
 	
@@ -429,66 +522,42 @@ mvTopology:
 
 
 render:
-	;Prologue
-	push r0
-	push r1
-	push r2
-	push r3
-	push r4
+    push r0
+    push r1
+    push r2
+    
+    loadn r0, #currentScreenIndexesChanged  ; Start pointer
+    load r2, currentScreenIndexesChangedIndex  ; End pointer
 
-
-	; Todo: Completely change this function, create a top layer map, and than a bootom layer one. Draw once at start, and just update the screen as needed.
-	
-	; Must be called in all positions that changed
-	
-	; currentScreenIndexesChanged stores all indexes that must be rewriten. 
-	; it will write them left to right, and when a \0 is met, it will stop. 
-	; has 1200 bytes alocated, but it will most likely never be used, but GUI can benefit from this large buffer
-	
-	
-	loadn r3, #'\0'
-
-	loadn r0, #currentScreenIndexesChanged
 	ScreenRenderIndex_Loop:
-
-		loadi r4, r0          	   ; Carrega no r4 o caractere apontado por r0
-		cmp r4, r3            	   ; Compara o caractere atual com '\0'
-		jeq ScreenRenderIndexExit    ; Se for igual a '\0', salta para ScreenRenderIndexExit, encerrando a impressão.
-
-		
-		; Takes r1 as the position to render
-		; Takes currentPrintingColor as a color variable
-		call ScreenRenderIndex
-		
-
-		inc r0
-		jmp ScreenRenderIndex_Loop
+    	cmp r0, r2  ; Checks if printing the end
+    	jeq ScreenRenderIndexExit
+    
+    	loadi r1, r0  ; Load position to render
+    	call ScreenRenderIndex
+    
+    	inc r0
+    	jmp ScreenRenderIndex_Loop
 
 	ScreenRenderIndexExit:
-
-	; todo create a help menu that shows the topology of the stage
-
-	; todo, create a interactive main menu, in which you can chose a level by stading on a tile
-	; menu animations
-	; esc animation	
-	
-	;Epilogue
-	
-	pop r4
-	pop r3
-	pop r2
-	pop r1
-	pop r0
-	
-	rts
+    	; Reset pointer to beginning
+    	loadn r0, #currentScreenIndexesChanged
+    	store currentScreenIndexesChangedIndex, r0
+    
+    pop r2
+    pop r1
+    pop r0
+    rts
 
 
 ImprimeStr:
 	push r0     ; printing position
-	push r1	 ; String Address
+	push r1	 ; String Address ; its now a pointer
 	push r2	 ; color
 	push r3
 	push r4
+
+	loadi r1, r1 ; now its the string addres
 	
 	loadn r3, #'\0'
 
@@ -526,6 +595,7 @@ AccesStringIndex:
 ScreenRenderIndex:
 	
 	push r0
+	push r1
 	push r2
 	push r3
 	push r4
@@ -541,7 +611,7 @@ ScreenRenderIndex:
 	;currentPropLayer
 	;currentBackgroundLayer
 
-	loadn r0, #currentPropLayer
+	load r0, currentPropLayer
 	; r1 = Index
 	; call AccesStringIndex
 
@@ -567,7 +637,7 @@ ScreenRenderIndex:
 	; else:
 	printsecondlayer:
 
-	loadn r0, #currentBackgroundLayer
+	load r0, currentBackgroundLayer
 	; r1 = Index
 	; call AccesStringIndex
 
@@ -596,45 +666,29 @@ ScreenRenderIndex:
 	endprintindex:
 	
 	pop r4
+	pop r3
 	pop r2
+	pop r1
 	pop r0
+
 	rts
 
 setIndexChanged:
-
-	; Takes r0 and r1 as inputs. This way it can be pluged directly into the movement logic
-	; does not modify them, has no output to be handled
-
-
-	push r2
-	push r3
-	push r4
-
-	loadn r2, #currentScreenIndexesChanged ; Addres to first character of string
-	load r3, currentScreenIndexesChangedIndex
-
-	 r2 + r3, points to the last changed index
-	add r4, r3, r2
-
-	storei r4, r0
-	inc r4
-	inc r3
-	
-	storei r4, r1
-	inc r4
-	inc r3
-	
-	loadn r2, "\0"
-	storei r4, r2
-
-	store currentScreenIndexesChangedIndex, r3
-
-	; can be optimized by making currentScreenIndexesChangedIndex point directly to "\0" so no need to have r4 and inc it
-
-
-	pop r4
-	pop r3
-	pop r2
-
-
-
+    ; r0 = new position
+    ; r1 = old position
+    
+    push r2
+    push r3
+    
+    load r2, currentScreenIndexesChangedIndex  ; Get current write pointer
+    
+    storei r2, r0  ; Write new position
+    inc r2
+    storei r2, r1  ; Write old position
+    inc r2
+    
+    store currentScreenIndexesChangedIndex, r2  ; Save updated pointer
+    
+    pop r3
+    pop r2
+    rts
