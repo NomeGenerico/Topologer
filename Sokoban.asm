@@ -739,6 +739,7 @@ SetIndexChanged:
     pop r2
     rts
 
+
 RLEDecoder:   ; (r0 <- r1)
 	push r0
 	push r1
@@ -841,6 +842,8 @@ UICall:
 			; r1 as the start position of where it will Draw
 			; r2 is the elements color. 
 
+			
+
 
 			; r0 will be the start of the draw position	
 			; r1 will be the end of the draw position
@@ -851,225 +854,331 @@ UIRedraw:
 			; takes r0 and r1, as start and end position of the ui element. assumes a retengular element
 
 
+UIDrawToBuffer:    
+					
+	; prints to the buffer. But values of zero do not overide what was there	
+	;takes r1 as the pointer to the RLE of the UI element 
+
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	; r0 is the string it will decode to. Pointer
+	; r1 is the string it will decode
+
+	load r0, currentUILayer
+	
+	loadn r3, #'\0'
+
+	UIDrawToBuffer_Loop:
+		loadi r4, r1          ; Carrega no r4 o caractere apontado por r1
+		cmp r4, r3            ; Compara o caractere atual com '\0'
+		jeq UIDrawToBuffer_Exit   ; Se for igual a '\0', salta para ImprimeStr_Sai, encerrando a impressão.
 		
 
+		mov r2, r4 ; loop lengh
+		inc r1
+		loadi r4, r1	; looped character
+		inc r2 ; makes loop easier, no need to compare to zero
 
-
+		UIDrawToBufferDecode_Loop:
+			dec r2
+			jz UIDrawToBufferDecode_Exit
 			
+				cmp r4, r3;  ; r3 = 0, 
+				jeq UI_Draw_SkipUIOveride
+
+				storei r0,r4
+				inc r0	
+
+				UI_Draw_SkipUIOveride:
+
+				jmp UIDrawToBufferDecode_Loop
+
+			UIDrawToBuffer_Exit:
+			inc r1 
+		jmp UIDrawToBuffer_Loop    ; Volta ao início do loop para continuar imprimindo.
 
 
-
-
-
+   UIDrawToBuffer_Exit:	
+	pop r4	; Resgata os valores dos registradores utilizados na Subrotina da Pilha
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+	rts			
 
 
 ;____________________________________
 	; UI Data
 
-	; Main Menu
+; UI object : Var#4  <Function, StartPos, EndPos, Color>
 
-	; Title: "TOPOLOGER" with 3 blank lines on top, 1 space left margin
-	; Original: 200 words (5 lines × 40 chars), RLE: 79 words, saved 60.5%
+UIConfirmationPrompt: var#4
 
-; Original: 1200 words, RLE: 193 words, saved 83.9%
-; RLE encoded level data
-TitleRLE : var #193  ; 96 runs, 193 words total
+	;function 
+	
+	UIConfirmationPromptFunction:
 
-	static TitleRLE + #0, #121      ; count
-	static TitleRLE + #1, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #2, #5      ; count
-	static TitleRLE + #3, #95    ; '_' (ASCII 95)
-	static TitleRLE + #4, #9      ; count
-	static TitleRLE + #5, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #6, #1      ; count
-	static TitleRLE + #7, #95    ; '_' (ASCII 95)
-	static TitleRLE + #8, #25      ; count
-	static TitleRLE + #9, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #10, #1      ; count
-	static TitleRLE + #11, #124    ; '|' (ASCII 124)
-	static TitleRLE + #12, #1      ; count
-	static TitleRLE + #13, #95    ; '_' (ASCII 95)
-	static TitleRLE + #14, #3      ; count
-	static TitleRLE + #15, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #16, #1      ; count
-	static TitleRLE + #17, #95    ; '_' (ASCII 95)
-	static TitleRLE + #18, #1      ; count
-	static TitleRLE + #19, #124    ; '|' (ASCII 124)
-	static TitleRLE + #20, #2      ; count
-	static TitleRLE + #21, #95    ; '_' (ASCII 95)
-	static TitleRLE + #22, #1      ; count
-	static TitleRLE + #23, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #24, #1      ; count
-	static TitleRLE + #25, #95    ; '_' (ASCII 95)
-	static TitleRLE + #26, #1      ; count
-	static TitleRLE + #27, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #28, #2      ; count
-	static TitleRLE + #29, #95    ; '_' (ASCII 95)
-	static TitleRLE + #30, #1      ; count
-	static TitleRLE + #31, #124    ; '|' (ASCII 124)
-	static TitleRLE + #32, #1      ; count
-	static TitleRLE + #33, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #34, #1      ; count
-	static TitleRLE + #35, #124    ; '|' (ASCII 124)
-	static TitleRLE + #36, #3      ; count
-	static TitleRLE + #37, #95    ; '_' (ASCII 95)
-	static TitleRLE + #38, #1      ; count
-	static TitleRLE + #39, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #40, #2      ; count
-	static TitleRLE + #41, #95    ; '_' (ASCII 95)
-	static TitleRLE + #42, #1      ; count
-	static TitleRLE + #43, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #44, #1      ; count
-	static TitleRLE + #45, #95    ; '_' (ASCII 95)
-	static TitleRLE + #46, #1      ; count
-	static TitleRLE + #47, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #48, #3      ; count
-	static TitleRLE + #49, #95    ; '_' (ASCII 95)
-	static TitleRLE + #50, #1      ; count
-	static TitleRLE + #51, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #52, #1      ; count
-	static TitleRLE + #53, #95    ; '_' (ASCII 95)
-	static TitleRLE + #54, #1      ; count
-	static TitleRLE + #55, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #56, #1      ; count
-	static TitleRLE + #57, #95    ; '_' (ASCII 95)
-	static TitleRLE + #58, #9      ; count
-	static TitleRLE + #59, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #60, #1      ; count
-	static TitleRLE + #61, #124    ; '|' (ASCII 124)
-	static TitleRLE + #62, #1      ; count
-	static TitleRLE + #63, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #64, #1      ; count
-	static TitleRLE + #65, #124    ; '|' (ASCII 124)
-	static TitleRLE + #66, #1      ; count
-	static TitleRLE + #67, #47    ; '/' (ASCII 47)
-	static TitleRLE + #68, #1      ; count
-	static TitleRLE + #69, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #70, #1      ; count
-	static TitleRLE + #71, #95    ; '_' (ASCII 95)
-	static TitleRLE + #72, #1      ; count
-	static TitleRLE + #73, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #74, #1      ; count
-	static TitleRLE + #75, #92    ; '\' (ASCII 92)
-	static TitleRLE + #76, #1      ; count
-	static TitleRLE + #77, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #78, #1      ; count
-	static TitleRLE + #79, #39    ; ''' (ASCII 39)
-	static TitleRLE + #80, #1      ; count
-	static TitleRLE + #81, #95    ; '_' (ASCII 95)
-	static TitleRLE + #82, #1      ; count
-	static TitleRLE + #83, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #84, #1      ; count
-	static TitleRLE + #85, #92    ; '\' (ASCII 92)
-	static TitleRLE + #86, #1      ; count
-	static TitleRLE + #87, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #88, #1      ; count
-	static TitleRLE + #89, #47    ; '/' (ASCII 47)
-	static TitleRLE + #90, #1      ; count
-	static TitleRLE + #91, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #92, #1      ; count
-	static TitleRLE + #93, #95    ; '_' (ASCII 95)
-	static TitleRLE + #94, #1      ; count
-	static TitleRLE + #95, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #96, #1      ; count
-	static TitleRLE + #97, #92    ; '\' (ASCII 92)
-	static TitleRLE + #98, #1      ; count
-	static TitleRLE + #99, #47    ; '/' (ASCII 47)
-	static TitleRLE + #100, #1      ; count
-	static TitleRLE + #101, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #102, #1      ; count
-	static TitleRLE + #103, #95    ; '_' (ASCII 95)
-	static TitleRLE + #104, #1      ; count
-	static TitleRLE + #105, #96    ; '`' (ASCII 96)
-	static TitleRLE + #106, #1      ; count
-	static TitleRLE + #107, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #108, #1      ; count
-	static TitleRLE + #109, #47    ; '/' (ASCII 47)
-	static TitleRLE + #110, #1      ; count
-	static TitleRLE + #111, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #112, #1      ; count
-	static TitleRLE + #113, #45    ; '-' (ASCII 45)
-	static TitleRLE + #114, #1      ; count
-	static TitleRLE + #115, #95    ; '_' (ASCII 95)
-	static TitleRLE + #116, #1      ; count
-	static TitleRLE + #117, #41    ; ')' (ASCII 41)
-	static TitleRLE + #118, #1      ; count
-	static TitleRLE + #119, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #120, #1      ; count
-	static TitleRLE + #121, #39    ; ''' (ASCII 39)
-	static TitleRLE + #122, #1      ; count
-	static TitleRLE + #123, #95    ; '_' (ASCII 95)
-	static TitleRLE + #124, #1      ; count
-	static TitleRLE + #125, #124    ; '|' (ASCII 124)
-	static TitleRLE + #126, #7      ; count
-	static TitleRLE + #127, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #128, #1      ; count
-	static TitleRLE + #129, #124    ; '|' (ASCII 124)
-	static TitleRLE + #130, #1      ; count
-	static TitleRLE + #131, #95    ; '_' (ASCII 95)
-	static TitleRLE + #132, #1      ; count
-	static TitleRLE + #133, #124    ; '|' (ASCII 124)
-	static TitleRLE + #134, #1      ; count
-	static TitleRLE + #135, #92    ; '\' (ASCII 92)
-	static TitleRLE + #136, #3      ; count
-	static TitleRLE + #137, #95    ; '_' (ASCII 95)
-	static TitleRLE + #138, #1      ; count
-	static TitleRLE + #139, #47    ; '/' (ASCII 47)
-	static TitleRLE + #140, #1      ; count
-	static TitleRLE + #141, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #142, #1      ; count
-	static TitleRLE + #143, #46    ; '.' (ASCII 46)
-	static TitleRLE + #144, #2      ; count
-	static TitleRLE + #145, #95    ; '_' (ASCII 95)
-	static TitleRLE + #146, #1      ; count
-	static TitleRLE + #147, #47    ; '/' (ASCII 47)
-	static TitleRLE + #148, #1      ; count
-	static TitleRLE + #149, #95    ; '_' (ASCII 95)
-	static TitleRLE + #150, #1      ; count
-	static TitleRLE + #151, #92    ; '\' (ASCII 92)
-	static TitleRLE + #152, #3      ; count
-	static TitleRLE + #153, #95    ; '_' (ASCII 95)
-	static TitleRLE + #154, #1      ; count
-	static TitleRLE + #155, #47    ; '/' (ASCII 47)
-	static TitleRLE + #156, #1      ; count
-	static TitleRLE + #157, #92    ; '\' (ASCII 92)
-	static TitleRLE + #158, #2      ; count
-	static TitleRLE + #159, #95    ; '_' (ASCII 95)
-	static TitleRLE + #160, #1      ; count
-	static TitleRLE + #161, #44    ; ',' (ASCII 44)
-	static TitleRLE + #162, #1      ; count
-	static TitleRLE + #163, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #164, #1      ; count
-	static TitleRLE + #165, #92    ; '\' (ASCII 92)
-	static TitleRLE + #166, #3      ; count
-	static TitleRLE + #167, #95    ; '_' (ASCII 95)
-	static TitleRLE + #168, #1      ; count
-	static TitleRLE + #169, #124    ; '|' (ASCII 124)
-	static TitleRLE + #170, #1      ; count
-	static TitleRLE + #171, #95    ; '_' (ASCII 95)
-	static TitleRLE + #172, #1      ; count
-	static TitleRLE + #173, #124    ; '|' (ASCII 124)
-	static TitleRLE + #174, #16      ; count
-	static TitleRLE + #175, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #176, #1      ; count
-	static TitleRLE + #177, #124    ; '|' (ASCII 124)
-	static TitleRLE + #178, #1      ; count
-	static TitleRLE + #179, #95    ; '_' (ASCII 95)
-	static TitleRLE + #180, #1      ; count
-	static TitleRLE + #181, #124    ; '|' (ASCII 124)
-	static TitleRLE + #182, #9      ; count
-	static TitleRLE + #183, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #184, #1      ; count
-	static TitleRLE + #185, #124    ; '|' (ASCII 124)
-	static TitleRLE + #186, #3      ; count
-	static TitleRLE + #187, #95    ; '_' (ASCII 95)
-	static TitleRLE + #188, #1      ; count
-	static TitleRLE + #189, #47    ; '/' (ASCII 47)
-	static TitleRLE + #190, #893      ; count
-	static TitleRLE + #191, #32    ; ' ' (ASCII 32)
-	static TitleRLE + #192, #0      ; terminator		
+	push r0
+	push r1 ; where to "print", actualy we are puting it into the uiLayer
+	push r2 ; color
+
+	load currentPrintingColor, r2
 
 
+
+
+
+	pop r2
+	pop r1
+	pop r0
+
+	
+
+
+
+
+MainMenu
+
+	TitleRLE : var #193  ; 96 runs, 193 words total
+
+		static TitleRLE + #0, #121      ; count
+		static TitleRLE + #1, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #2, #5      ; count
+		static TitleRLE + #3, #95    ; '_' (ASCII 95)
+		static TitleRLE + #4, #9      ; count
+		static TitleRLE + #5, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #6, #1      ; count
+		static TitleRLE + #7, #95    ; '_' (ASCII 95)
+		static TitleRLE + #8, #25      ; count
+		static TitleRLE + #9, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #10, #1      ; count
+		static TitleRLE + #11, #124    ; '|' (ASCII 124)
+		static TitleRLE + #12, #1      ; count
+		static TitleRLE + #13, #95    ; '_' (ASCII 95)
+		static TitleRLE + #14, #3      ; count
+		static TitleRLE + #15, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #16, #1      ; count
+		static TitleRLE + #17, #95    ; '_' (ASCII 95)
+		static TitleRLE + #18, #1      ; count
+		static TitleRLE + #19, #124    ; '|' (ASCII 124)
+		static TitleRLE + #20, #2      ; count
+		static TitleRLE + #21, #95    ; '_' (ASCII 95)
+		static TitleRLE + #22, #1      ; count
+		static TitleRLE + #23, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #24, #1      ; count
+		static TitleRLE + #25, #95    ; '_' (ASCII 95)
+		static TitleRLE + #26, #1      ; count
+		static TitleRLE + #27, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #28, #2      ; count
+		static TitleRLE + #29, #95    ; '_' (ASCII 95)
+		static TitleRLE + #30, #1      ; count
+		static TitleRLE + #31, #124    ; '|' (ASCII 124)
+		static TitleRLE + #32, #1      ; count
+		static TitleRLE + #33, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #34, #1      ; count
+		static TitleRLE + #35, #124    ; '|' (ASCII 124)
+		static TitleRLE + #36, #3      ; count
+		static TitleRLE + #37, #95    ; '_' (ASCII 95)
+		static TitleRLE + #38, #1      ; count
+		static TitleRLE + #39, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #40, #2      ; count
+		static TitleRLE + #41, #95    ; '_' (ASCII 95)
+		static TitleRLE + #42, #1      ; count
+		static TitleRLE + #43, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #44, #1      ; count
+		static TitleRLE + #45, #95    ; '_' (ASCII 95)
+		static TitleRLE + #46, #1      ; count
+		static TitleRLE + #47, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #48, #3      ; count
+		static TitleRLE + #49, #95    ; '_' (ASCII 95)
+		static TitleRLE + #50, #1      ; count
+		static TitleRLE + #51, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #52, #1      ; count
+		static TitleRLE + #53, #95    ; '_' (ASCII 95)
+		static TitleRLE + #54, #1      ; count
+		static TitleRLE + #55, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #56, #1      ; count
+		static TitleRLE + #57, #95    ; '_' (ASCII 95)
+		static TitleRLE + #58, #9      ; count
+		static TitleRLE + #59, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #60, #1      ; count
+		static TitleRLE + #61, #124    ; '|' (ASCII 124)
+		static TitleRLE + #62, #1      ; count
+		static TitleRLE + #63, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #64, #1      ; count
+		static TitleRLE + #65, #124    ; '|' (ASCII 124)
+		static TitleRLE + #66, #1      ; count
+		static TitleRLE + #67, #47    ; '/' (ASCII 47)
+		static TitleRLE + #68, #1      ; count
+		static TitleRLE + #69, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #70, #1      ; count
+		static TitleRLE + #71, #95    ; '_' (ASCII 95)
+		static TitleRLE + #72, #1      ; count
+		static TitleRLE + #73, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #74, #1      ; count
+		static TitleRLE + #75, #92    ; '\' (ASCII 92)
+		static TitleRLE + #76, #1      ; count
+		static TitleRLE + #77, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #78, #1      ; count
+		static TitleRLE + #79, #39    ; ''' (ASCII 39)
+		static TitleRLE + #80, #1      ; count
+		static TitleRLE + #81, #95    ; '_' (ASCII 95)
+		static TitleRLE + #82, #1      ; count
+		static TitleRLE + #83, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #84, #1      ; count
+		static TitleRLE + #85, #92    ; '\' (ASCII 92)
+		static TitleRLE + #86, #1      ; count
+		static TitleRLE + #87, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #88, #1      ; count
+		static TitleRLE + #89, #47    ; '/' (ASCII 47)
+		static TitleRLE + #90, #1      ; count
+		static TitleRLE + #91, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #92, #1      ; count
+		static TitleRLE + #93, #95    ; '_' (ASCII 95)
+		static TitleRLE + #94, #1      ; count
+		static TitleRLE + #95, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #96, #1      ; count
+		static TitleRLE + #97, #92    ; '\' (ASCII 92)
+		static TitleRLE + #98, #1      ; count
+		static TitleRLE + #99, #47    ; '/' (ASCII 47)
+		static TitleRLE + #100, #1      ; count
+		static TitleRLE + #101, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #102, #1      ; count
+		static TitleRLE + #103, #95    ; '_' (ASCII 95)
+		static TitleRLE + #104, #1      ; count
+		static TitleRLE + #105, #96    ; '`' (ASCII 96)
+		static TitleRLE + #106, #1      ; count
+		static TitleRLE + #107, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #108, #1      ; count
+		static TitleRLE + #109, #47    ; '/' (ASCII 47)
+		static TitleRLE + #110, #1      ; count
+		static TitleRLE + #111, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #112, #1      ; count
+		static TitleRLE + #113, #45    ; '-' (ASCII 45)
+		static TitleRLE + #114, #1      ; count
+		static TitleRLE + #115, #95    ; '_' (ASCII 95)
+		static TitleRLE + #116, #1      ; count
+		static TitleRLE + #117, #41    ; ')' (ASCII 41)
+		static TitleRLE + #118, #1      ; count
+		static TitleRLE + #119, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #120, #1      ; count
+		static TitleRLE + #121, #39    ; ''' (ASCII 39)
+		static TitleRLE + #122, #1      ; count
+		static TitleRLE + #123, #95    ; '_' (ASCII 95)
+		static TitleRLE + #124, #1      ; count
+		static TitleRLE + #125, #124    ; '|' (ASCII 124)
+		static TitleRLE + #126, #7      ; count
+		static TitleRLE + #127, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #128, #1      ; count
+		static TitleRLE + #129, #124    ; '|' (ASCII 124)
+		static TitleRLE + #130, #1      ; count
+		static TitleRLE + #131, #95    ; '_' (ASCII 95)
+		static TitleRLE + #132, #1      ; count
+		static TitleRLE + #133, #124    ; '|' (ASCII 124)
+		static TitleRLE + #134, #1      ; count
+		static TitleRLE + #135, #92    ; '\' (ASCII 92)
+		static TitleRLE + #136, #3      ; count
+		static TitleRLE + #137, #95    ; '_' (ASCII 95)
+		static TitleRLE + #138, #1      ; count
+		static TitleRLE + #139, #47    ; '/' (ASCII 47)
+		static TitleRLE + #140, #1      ; count
+		static TitleRLE + #141, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #142, #1      ; count
+		static TitleRLE + #143, #46    ; '.' (ASCII 46)
+		static TitleRLE + #144, #2      ; count
+		static TitleRLE + #145, #95    ; '_' (ASCII 95)
+		static TitleRLE + #146, #1      ; count
+		static TitleRLE + #147, #47    ; '/' (ASCII 47)
+		static TitleRLE + #148, #1      ; count
+		static TitleRLE + #149, #95    ; '_' (ASCII 95)
+		static TitleRLE + #150, #1      ; count
+		static TitleRLE + #151, #92    ; '\' (ASCII 92)
+		static TitleRLE + #152, #3      ; count
+		static TitleRLE + #153, #95    ; '_' (ASCII 95)
+		static TitleRLE + #154, #1      ; count
+		static TitleRLE + #155, #47    ; '/' (ASCII 47)
+		static TitleRLE + #156, #1      ; count
+		static TitleRLE + #157, #92    ; '\' (ASCII 92)
+		static TitleRLE + #158, #2      ; count
+		static TitleRLE + #159, #95    ; '_' (ASCII 95)
+		static TitleRLE + #160, #1      ; count
+		static TitleRLE + #161, #44    ; ',' (ASCII 44)
+		static TitleRLE + #162, #1      ; count
+		static TitleRLE + #163, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #164, #1      ; count
+		static TitleRLE + #165, #92    ; '\' (ASCII 92)
+		static TitleRLE + #166, #3      ; count
+		static TitleRLE + #167, #95    ; '_' (ASCII 95)
+		static TitleRLE + #168, #1      ; count
+		static TitleRLE + #169, #124    ; '|' (ASCII 124)
+		static TitleRLE + #170, #1      ; count
+		static TitleRLE + #171, #95    ; '_' (ASCII 95)
+		static TitleRLE + #172, #1      ; count
+		static TitleRLE + #173, #124    ; '|' (ASCII 124)
+		static TitleRLE + #174, #16      ; count
+		static TitleRLE + #175, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #176, #1      ; count
+		static TitleRLE + #177, #124    ; '|' (ASCII 124)
+		static TitleRLE + #178, #1      ; count
+		static TitleRLE + #179, #95    ; '_' (ASCII 95)
+		static TitleRLE + #180, #1      ; count
+		static TitleRLE + #181, #124    ; '|' (ASCII 124)
+		static TitleRLE + #182, #9      ; count
+		static TitleRLE + #183, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #184, #1      ; count
+		static TitleRLE + #185, #124    ; '|' (ASCII 124)
+		static TitleRLE + #186, #3      ; count
+		static TitleRLE + #187, #95    ; '_' (ASCII 95)
+		static TitleRLE + #188, #1      ; count
+		static TitleRLE + #189, #47    ; '/' (ASCII 47)
+		static TitleRLE + #190, #893      ; count
+		static TitleRLE + #191, #32    ; ' ' (ASCII 32)
+		static TitleRLE + #192, #0      ; terminator	
+
+ConfirmationRLE : var #39  ; 19 runs, 39 words total
+
+	static ConfirmationRLE + #0, #1      ; count
+	static ConfirmationRLE + #1, #42    ; '*' (ASCII 42)
+	static ConfirmationRLE + #2, #12      ; count
+	static ConfirmationRLE + #3, #45    ; '-' (ASCII 45)
+	static ConfirmationRLE + #4, #1      ; count
+	static ConfirmationRLE + #5, #42    ; '*' (ASCII 42)
+	static ConfirmationRLE + #6, #26      ; count
+	static ConfirmationRLE + #7, #32    ; ' ' (ASCII 32)
+	static ConfirmationRLE + #8, #1      ; count
+	static ConfirmationRLE + #9, #124    ; '|' (ASCII 124)
+	static ConfirmationRLE + #10, #2      ; count
+	static ConfirmationRLE + #11, #32    ; ' ' (ASCII 32)
+	static ConfirmationRLE + #12, #1      ; count
+	static ConfirmationRLE + #13, #78    ; 'N' (ASCII 78)
+	static ConfirmationRLE + #14, #1      ; count
+	static ConfirmationRLE + #15, #79    ; 'O' (ASCII 79)
+	static ConfirmationRLE + #16, #3      ; count
+	static ConfirmationRLE + #17, #32    ; ' ' (ASCII 32)
+	static ConfirmationRLE + #18, #1      ; count
+	static ConfirmationRLE + #19, #89    ; 'Y' (ASCII 89)
+	static ConfirmationRLE + #20, #1      ; count
+	static ConfirmationRLE + #21, #101    ; 'e' (ASCII 101)
+	static ConfirmationRLE + #22, #1      ; count
+	static ConfirmationRLE + #23, #115    ; 's' (ASCII 115)
+	static ConfirmationRLE + #24, #2      ; count
+	static ConfirmationRLE + #25, #32    ; ' ' (ASCII 32)
+	static ConfirmationRLE + #26, #1      ; count
+	static ConfirmationRLE + #27, #124    ; '|' (ASCII 124)
+	static ConfirmationRLE + #28, #26      ; count
+	static ConfirmationRLE + #29, #32    ; ' ' (ASCII 32)
+	static ConfirmationRLE + #30, #1      ; count
+	static ConfirmationRLE + #31, #42    ; '*' (ASCII 42)
+	static ConfirmationRLE + #32, #12      ; count
+	static ConfirmationRLE + #33, #45    ; '-' (ASCII 45)
+	static ConfirmationRLE + #34, #1      ; count
+	static ConfirmationRLE + #35, #42    ; '*' (ASCII 42)
+	static ConfirmationRLE + #36, #1106      ; count
+	static ConfirmationRLE + #37, #32    ; ' ' (ASCII 32)
+	static ConfirmationRLE + #38, #0      ; terminator
 
 ; Level Data:
 
