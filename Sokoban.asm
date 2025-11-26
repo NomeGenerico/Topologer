@@ -22,6 +22,7 @@ curentTopology: var#1
 currentScreenIndexesChanged : var#1210
 currentScreenIndexesChangedIndex: var#1
 
+
 ; UI Data 
 UIStack : var#20 ; max of 20 ui elements
 UIStackPointer: var#1
@@ -32,7 +33,7 @@ UIPreviousSelectedElement: var#3 ;<ID, StartPos, EndPos>
 uiLayerColor: var#1 
 propLayerColor: var#1
 backgroundLayerColor: var#1
-currentPrintingColor: var#1 ; 0 is the vale for white, USE 1 FOR NO COLOR
+currentPrintingColor: var#1 ; 0 is the value for white, USE 1 FOR NO COLOR
 
 LayerProps : string "                                                                                                                                                                                                                                                                                                                                                                                       @@@@@@@                                 @     @                                 @     @                                 @     @                                 @     @                                 @     @                                 @@@@@@@                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  "
 LayerBackground : string "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                "
@@ -42,15 +43,15 @@ LayerBehavior: var#1200
 InputedChar: var#1
 
 ISUIActive: var#1 
-static ISUIActive + #0, 0
+static ISUIActive + #0, #0
 
 main:
 
 	;SetUp
 
-		; Initialize the changed index pointer to start of buffer
-   		 loadn r0, #currentScreenIndexesChanged
-   		 store currentScreenIndexesChangedIndex, r0
+		; initilize currentScreenIndexesChangedIndex
+		loadn r0, #currentScreenIndexesChanged
+		store currentScreenIndexesChangedIndex, r0
 
 
 		; Initialize layer pointers
@@ -67,12 +68,16 @@ main:
 			
 		;Initialize UI Data
 
-		loadn r0, #UIStack
-		store UIStackPointer, r0
+			load r0, currentUILayer
+			loadn r1, #ZeroRLE
+			call RLEDecoder ; (r0, r1)
+
+			loadn r0, #UIStack
+			store UIStackPointer, r0
 
 		; Load Level 1
 			loadn r2, #Level1
-			call LoadStage
+			call LoadStage ; (r1)
 
 		; positions player in level
 
@@ -131,12 +136,8 @@ InputHandler:
 		cmp r0, r1
 		jne SkipInputESCUIcall
 
-		loadn r0, #ConfirmationPromptRLE
+		loadn r0, #UIConfirmationPrompt
 		call UICall
-
-		loadn r0, #1
-		store ISUIActive, r0
-		mov r6, r0
 
 		SkipInputESCUIcall:
 
@@ -498,7 +499,6 @@ mvTopology:
 		push r4
 		push r5
 		push r6
-		push r7
 		
 
 			
@@ -569,7 +569,6 @@ mvTopology:
 			loadn r2, #1630
 			
 			mov r6, r2		
-			;mov r7, r3
 
 			cmp r2, r3
 			jeg endmvTopoplogy
@@ -593,7 +592,6 @@ mvTopology:
 
 		; marks what must be re-rendered
 	
-		pop r7
 		pop r6
 		pop r5
 		pop r4
@@ -637,7 +635,7 @@ render:
 	loadn r0, #currentScreenIndexesChanged  	; Start address
     load r2, currentScreenIndexesChangedIndex   ; End adddres
 
-	ScreenRenderIndexUI_loop:
+	ScreenRenderIndexUI_loop:     ; BIG BUG, MUST CHECK IF CHAR IS ZERO BEFORE ADDING COLOR
 
 		cmp r0, r2
 		jeq ScreenRenderHighlightedUI
@@ -668,7 +666,7 @@ render:
 
 	; set HighlightColor
 
-	loadn r0, #100 ; should be the color blue
+	loadn r0, #64512 ; should be the color blue
 
 
 	store currentPrintingColor, r0
@@ -700,8 +698,9 @@ render:
 	ScreenRenderIndexExit:
 
     	; Reset pointer to beginning
-    	loadn r0, #currentScreenIndexesChanged
-    	store currentScreenIndexesChangedIndex, r0
+    
+	loadn r0, #currentScreenIndexesChanged
+    store currentScreenIndexesChangedIndex, r0
     
 	pop r3
     pop r2
@@ -741,28 +740,28 @@ ImprimeStr:
 	rts
 
 FullScreenPrint:
+	push r0
     push r1
     push r2
     
-    loadn r1, #0 
+    loadn r0, #0 
     loadn r2, #1199
 
 	FullScreenRenderIndex_Loop:
-    	cmp r1, r2  ; Checks if printing the end
+    	cmp r0, r2  ; Checks if printing the end
     	jeq FullScreenRenderIndexExit
     
     	call SetIndexChanged
     
-    	inc r1
+    	inc r0
     	jmp FullScreenRenderIndex_Loop
 
 	FullScreenRenderIndexExit:
-    	; Reset pointer to beginning
-    	loadn r0, #currentScreenIndexesChanged
-    	store currentScreenIndexesChangedIndex, r0
     
     pop r2
     pop r1
+	pop r0
+
     rts
 
 AccesStringIndex:
@@ -899,6 +898,8 @@ ScreenRenderUIIndex:   ; <ScreenIndex>
 
 SetIndexChanged: ; <index>
     ; r0 = index
+
+	mov r7, r0
     
     push r2
     push r3
@@ -915,7 +916,7 @@ SetIndexChanged: ; <index>
     pop r2
     rts
 
-RLEDecoder:   ; (r0 <- r1)
+RLEDecoder:   ; (r0 <- <r1>)
 	push r0
 	push r1
 	push r2
@@ -957,6 +958,7 @@ RLEDecoder:   ; (r0 <- r1)
 	pop r0
 	rts
 
+;TODO:
 RLEEncoder:
 
 	rts
@@ -1059,8 +1061,9 @@ SquareFinder: ;<Start, End,    , FunctionID> ; function must be an ID because th
 			jmp SquareFinderJumpTable
 			SquareFinderJumpTable_exit:
 
-			SquareFinder_yloop_end:
 			inc r0
+			SquareFinder_yloop_end:
+			
 
 		inc r4
 		jmp SquareFinder_xloop
@@ -1090,14 +1093,21 @@ UICall: 	; <UI element>  Pushes element in stack, Calls: UIDrawToBuffer, SquareF
 			push r2
 			push r3
 
-			mov r0, r1
+
 			; first drawing of the element
 				store currentPrintingColor, r2
 
 				; protect Ui position on screen 
-				
 
-				load r0, currentUILayer 
+				inc r0
+				loadi r3, r0
+				inc r0
+				inc r0
+				inc r0 ; Pointer to the Addres of the RLE 
+				loadi r0, r0  ; r0, contains the addres of the RLE
+				mov r1, r0 ; RLE Address
+				mov r0, r3 ; ScreenIndex startPos
+
 				call UIDrawToBuffer; 
 
 				mov r1, r2
@@ -1118,6 +1128,9 @@ UICall: 	; <UI element>  Pushes element in stack, Calls: UIDrawToBuffer, SquareF
 			; r1 will be the end of the draw position
 			; r2 will be the outupt   ; exemple, confirmation prompt returns either a 1 or a 0
 
+			loadn r0, #1
+			store ISUIActive, r0
+
 			pop r3
 			pop r2
 			pop r1
@@ -1125,6 +1138,26 @@ UICall: 	; <UI element>  Pushes element in stack, Calls: UIDrawToBuffer, SquareF
 	rts
 
 UIClose:
+
+	push r0
+	push r1
+
+	loadn r0, #0
+	loadn r1, #UICurentlySelectedElement
+	storei r1, r0 ; reset id
+	inc r1 
+	storei r1, r0 ; reset start
+	inc r1 
+	storei r1, r0 ; reset end
+
+	load r0, UIStackPointer
+	dec r0
+	store UIStackPointer, r0	
+
+	pop r1
+	pop r0
+
+	rts
 
 TODO:
 UIRedraw:   ; <> Rebuilds UI Buffer from the stack  
@@ -1144,42 +1177,50 @@ UIDrawToBuffer:   ; <Start, <UIElemenent_RLE>>
 	push r2
 	push r3
 	push r4
+	push r5
 	; r1 is the string it will decode
 
-	load r0, currentUILayer
+	load r3, currentUILayer ; addres the first position of the ui leayer
+	add r0, r0, r3
 	
-	loadn r3, #'\0'
+	loadn r3, #0
 
 	UIDrawToBuffer_Loop:
-		loadi r4, r1        	 
-		cmp r4, r3            	  
-		jeq UIDrawToBuffer_Exit   
 
-		mov r2, r4 ; loop lengh
-		inc r1
+		loadi r4, r1    ;  r1 is the pointer to the fisrt string character ;count
+		mov r2, r4 ; loop lengh ; count
+
+		cmp r2, r3 ; if count zero exit 
+		jeq UIDrawToBuffer_Exit
+
+		inc r1   ; next string address
 		loadi r4, r1	; looped character
-		inc r2 ; makes loop easier, no need to compare to zero
+		inc r1 ; sets r1 to the next count
 
-		UIDrawToBufferDecode_Loop:
-			dec r2
-			jz UIDrawToBufferDecode_Exit
+		UIDrawToBufferDecode_Loop:     
 			
-				cmp r4, r3;  ; r3 = 0, 
+			cmp r2, r3   ; checks if remaining lengh is 0
+			jeq UIDrawToBufferDecode_Exit
+			
+				cmp r4, r3;  ; r3 = 0 , r4 is char
 				jeq UI_Draw_SkipUIOveride
 
-				storei r0,r4
+				storei r0, r4  ; stores char in index memory r0 ; addres of the UILayer
 
 				UI_Draw_SkipUIOveride:
-				inc r0	
+				inc r0
+				dec r2; decrements loop lenght
+				
+				jmp UIDrawToBufferDecode_Loop ; in loop exit, needs to get chew count and char
+	
+			UIDrawToBufferDecode_Exit:   ; jumps here if count is zero
 
-				jmp UIDrawToBufferDecode_Loop
-
-			inc r1 
 		jmp UIDrawToBuffer_Loop    ; Volta ao início do loop para continuar imprimindo.
 
-	UIDrawToBufferDecode_Exit:
 
-    UIDrawToBuffer_Exit:	
+
+    UIDrawToBuffer_Exit:
+	pop r5	
 	pop r4	; Resgata os valores dos registradores utilizados na Subrotina da Pilha
 	pop r3
 	pop r2
@@ -1216,9 +1257,7 @@ LoadGameObjects: ; Must be inserted in LoadStage
 
 		push r0
 		push r2
-		push r7
-		
-		mov r0, r6 ; r0 is now the screen index
+
 
 		loadn r2, #0 ; set screen index changed
 			cmp r2, r3
@@ -1229,7 +1268,6 @@ LoadGameObjects: ; Must be inserted in LoadStage
 
 
 
-		pop r7
 		pop r2
 		pop r0
 
@@ -1402,16 +1440,9 @@ LoadGameObjects: ; Must be inserted in LoadStage
 				storei r0, r2 ; Update end
 
 			jmp UIConfirmationPrompt_Continue
+
 			UIConfirmationPrompt_Exit:
 
-			;reset 
-				loadn r0, #0
-				loadn r1, #UICurentlySelectedElement
-				storei r1, r0 ; reset id
-				inc r1 
-				storei r1, r0 ; reset start
-				inc r1 
-				storei r1, r0 ; reset end
 
 				call UIClose
 
@@ -1667,8 +1698,13 @@ LoadGameObjects: ; Must be inserted in LoadStage
 
 	EmptyRLE: var#3
 		static EmptyRLE + #0, #1200; count
-		static EmptyRLE + #1, #32    ; ' ' (ASCII 32)
+		static EmptyRLE + #1, #0    ; 0
 		static EmptyRLE + #2, #0     ; terminator
+
+	ZeroRLE: var#3
+		static ZeroRLE + #0, #1200; count
+		static ZeroRLE + #1, #32    ; ' ' (ASCII 32)
+		static ZeroRLE + #2, #0     ; terminator
 
 	Level1: var#5
 
