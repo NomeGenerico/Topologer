@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QLineEdit, QLabel, QColorDialog, QScrollArea,
                              QDialog, QDialogButtonBox)
 from PyQt6.QtCore import Qt, QRect
-from PyQt6.QtGui import QPainter, QColor, QFont, QPen
+from PyQt6.QtGui import QPainter, QColor, QFont, QPen, QKeySequence, QShortcut
 
 class AddTileDialog(QDialog):
     """Dialog for adding custom tiles"""
@@ -68,12 +68,13 @@ class AddTileDialog(QDialog):
 
 class GridCanvas(QWidget):
     """Canvas widget that handles all drawing and input"""
-    def __init__(self, cols, rows, tiles):
+    def __init__(self, cols, rows, tiles, status_label):
         super().__init__()
         self.cols = cols
         self.rows = rows
         self.tiles = tiles
         self.cell_size = 20
+        self.status_label = status_label
         
         # Set fixed size
         self.setFixedSize(self.cols * self.cell_size + 1, self.rows * self.cell_size + 1)
@@ -86,8 +87,13 @@ class GridCanvas(QWidget):
         self.is_right_drawing = False
         self.selected_tile = ' '
         
-        # Enable mouse tracking
+        # Current hover position for keyboard input
+        self.hover_row = None
+        self.hover_col = None
+        
+        # Enable mouse tracking and keyboard focus
         self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
     
     def paintEvent(self, event):
         """Render the grid"""
@@ -131,6 +137,22 @@ class GridCanvas(QWidget):
             return row, col
         return None, None
     
+    def update_status(self, row, col):
+        """Update status label with current position info"""
+        if row is not None and col is not None:
+            self.hover_row = row
+            self.hover_col = col
+            index = row * self.cols + col
+            char = self.grid_data[row][col]
+            char_display = repr(char) if char != ' ' else "'Space'"
+            self.status_label.setText(
+                f"Row: {row}  Col: {col}  Index: {index}  Char: {char_display} (ASCII {ord(char)})  [Press any key to type]"
+            )
+        else:
+            self.hover_row = None
+            self.hover_col = None
+            self.status_label.setText("Position: Outside grid")
+    
     def mousePressEvent(self, event):
         """Handle mouse press"""
         row, col = self.get_cell_from_pos(event.pos().x(), event.pos().y())
@@ -145,6 +167,8 @@ class GridCanvas(QWidget):
     def mouseMoveEvent(self, event):
         """Handle mouse drag"""
         row, col = self.get_cell_from_pos(event.pos().x(), event.pos().y())
+        self.update_status(row, col)
+        
         if row is not None and col is not None:
             if self.is_left_drawing:
                 self.place_tile(row, col)
@@ -157,6 +181,29 @@ class GridCanvas(QWidget):
             self.is_left_drawing = False
         elif event.button() == Qt.MouseButton.RightButton:
             self.is_right_drawing = False
+    
+    def leaveEvent(self, event):
+        """Handle mouse leaving the widget"""
+        self.hover_row = None
+        self.hover_col = None
+        self.status_label.setText("Position: Outside grid")
+    
+    def keyPressEvent(self, event):
+        """Handle keyboard input to type characters at hover position"""
+        # Check for Ctrl+V (paste/import)
+        if event.key() == Qt.Key.Key_V and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            # Trigger import from parent
+            if self.parent() and hasattr(self.parent(), 'import_from_string'):
+                self.parent().import_from_string()
+            return
+        
+        if self.hover_row is not None and self.hover_col is not None:
+            text = event.text()
+            if text and len(text) == 1 and text.isprintable():
+                # Type the character at hover position
+                self.grid_data[self.hover_row][self.hover_col] = text
+                self.update()
+                self.update_status(self.hover_row, self.hover_col)
     
     def place_tile(self, row, col):
         """Place selected tile"""
@@ -223,16 +270,65 @@ class GridCanvas(QWidget):
         
         return '\n'.join(result)
     
-    def import_from_string(self, text):
-        """Import string to grid"""
-        if len(text) != self.cols * self.rows:
-            return False
+    def import_from_string(self, text, start_row=None, start_col=None):
+        """Import string to grid - supports multiline ASCII art with proper padding"""
+        # If no start position specified, import to entire grid
+        if start_row is None or start_col is None:
+            start_row = 0
+            start_col = 0
+            full_grid_import = True
+        else:
+            full_grid_import = False
         
-        for row in range(self.rows):
-            for col in range(self.cols):
-                idx = row * self.cols + col
-                char = text[idx] if idx < len(text) else ' '
-                self.grid_data[row][col] = char
+        # Handle multiline input (ASCII art)
+        if '\n' in text:
+            lines = text.split('\n')
+            
+            for line_idx, line in enumerate(lines):
+                target_row = start_row + line_idx
+                
+                # Stop if we exceed grid height
+                if target_row >= self.rows:
+                    break
+                
+                # Place each character in the line
+                for char_idx, char in enumerate(line):
+                    target_col = start_col + char_idx
+                    
+                    # Stop if we exceed grid width
+                    if target_col >= self.cols:
+                        break
+                    
+                    self.grid_data[target_row][target_col] = char
+        else:
+            # Single line import
+            if full_grid_import:
+                # Old behavior: fill entire grid
+                max_size = self.cols * self.rows
+                
+                # Pad with spaces if shorter than grid
+                if len(text) < max_size:
+                    text = text + ' ' * (max_size - len(text))
+                
+                # Truncate if longer than grid
+                text = text[:max_size]
+                
+                for row in range(self.rows):
+                    for col in range(self.cols):
+                        idx = row * self.cols + col
+                        char = text[idx] if idx < len(text) else ' '
+                        self.grid_data[row][col] = char
+            else:
+                # Paste at cursor position
+                char_idx = 0
+                for row in range(start_row, self.rows):
+                    for col in range(start_col if row == start_row else 0, self.cols):
+                        if char_idx >= len(text):
+                            break
+                        self.grid_data[row][col] = text[char_idx]
+                        char_idx += 1
+                    if char_idx >= len(text):
+                        break
         
         self.update()
         return True
@@ -242,7 +338,7 @@ class LevelEditor(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Sokoban Level Editor - Extended")
-        self.setGeometry(100, 100, 1200, 750)
+        self.setGeometry(100, 100, 1200, 800)
         
         # Grid dimensions
         self.cols = 40
@@ -266,9 +362,25 @@ class LevelEditor(QMainWindow):
         self.setCentralWidget(central_widget)
         main_layout = QHBoxLayout(central_widget)
         
-        # Left side: Grid canvas
+        # Left side: Grid canvas and status
         left_layout = QVBoxLayout()
-        self.grid_canvas = GridCanvas(self.cols, self.rows, self.tiles)
+        
+        # Status label for position info
+        self.status_label = QLabel("Position: Hover over grid")
+        self.status_label.setStyleSheet("""
+            QLabel {
+                background-color: #1e1e1e;
+                color: #ffffff;
+                padding: 5px;
+                border: 1px solid #444444;
+                font-family: Courier;
+                font-size: 11px;
+            }
+        """)
+        left_layout.addWidget(self.status_label)
+        
+        # Grid canvas
+        self.grid_canvas = GridCanvas(self.cols, self.rows, self.tiles, self.status_label)
         left_layout.addWidget(self.grid_canvas)
         left_layout.addStretch()
         
@@ -307,8 +419,11 @@ class LevelEditor(QMainWindow):
         label1 = QLabel("• Left-click and drag to paint tiles")
         label2 = QLabel("• Right-click and drag to erase")
         label3 = QLabel("• Add custom tiles for UI elements")
+        label4 = QLabel("• Hover over grid to see position info")
+        label5 = QLabel("• Press any key while hovering to type it")
+        label6 = QLabel("• Ctrl+V to paste at hover position")
         
-        for label in [label1, label2, label3]:
+        for label in [label1, label2, label3, label4, label5, label6]:
             label.setWordWrap(True)
             instructions_layout.addWidget(label)
         
@@ -331,20 +446,24 @@ class LevelEditor(QMainWindow):
         export_btn.clicked.connect(self.export_to_string)
         actions_layout.addWidget(export_btn)
         
-        import_btn = QPushButton("Import from String")
+        import_btn = QPushButton("Import from String (Ctrl+V)")
         import_btn.clicked.connect(self.import_from_string)
         actions_layout.addWidget(import_btn)
+        
+        # Add keyboard shortcut for import
+        self.import_shortcut = QShortcut(QKeySequence("Ctrl+V"), self)
+        self.import_shortcut.activated.connect(self.import_from_string)
         
         actions_group.setLayout(actions_layout)
         right_layout.addWidget(actions_group)
         
         # String output
-        self.string_group = QGroupBox("Level String (1200 chars)")
+        self.string_group = QGroupBox("Level String (up to 1200 chars)")
         string_layout = QVBoxLayout()
         
         self.string_output = QTextEdit()
         self.string_output.setFont(QFont("Courier", 9))
-        self.string_output.setPlaceholderText("Level string will appear here...")
+        self.string_output.setPlaceholderText("Level string will appear here...\nSupports multiline ASCII art - each line will be padded to grid width")
         string_layout.addWidget(self.string_output)
         
         self.string_group.setLayout(string_layout)
@@ -405,7 +524,7 @@ class LevelEditor(QMainWindow):
         if checked:
             self.string_group.setTitle("Level String (RLE Compressed)")
         else:
-            self.string_group.setTitle("Level String (1200 chars)")
+            self.string_group.setTitle("Level String (up to 1200 chars)")
     
     def export_to_string(self):
         """Export grid to string format"""
@@ -431,9 +550,10 @@ class LevelEditor(QMainWindow):
             self.string_output.setPlainText(result)
     
     def import_from_string(self):
-        """Import string to grid"""
+        """Import string to grid - supports multiline ASCII art and paste at cursor"""
         text = self.string_output.toPlainText()
         
+        # Skip RLE comment lines
         if text.startswith(';'):
             lines = text.split('\n', 1)
             if len(lines) > 1:
@@ -441,8 +561,39 @@ class LevelEditor(QMainWindow):
             else:
                 text = ""
         
-        if not self.grid_canvas.import_from_string(text):
-            self.string_output.append(f"\n\nError: Expected {self.cols * self.rows} characters")
+        # Check if mouse is hovering over canvas
+        start_row = None
+        start_col = None
+        paste_mode = False
+        
+        if self.grid_canvas.hover_row is not None and self.grid_canvas.hover_col is not None:
+            start_row = self.grid_canvas.hover_row
+            start_col = self.grid_canvas.hover_col
+            paste_mode = True
+        
+        # Count lines for info message
+        line_count = text.count('\n') + 1 if text else 0
+        original_len = len(text)
+        
+        # Import with automatic padding/truncation and line handling
+        self.grid_canvas.import_from_string(text, start_row, start_col)
+        
+        # Show info message
+        max_len = self.cols * self.rows
+        if paste_mode:
+            if '\n' in text:
+                self.string_output.append(f"\n✓ Pasted {line_count} lines at row {start_row}, col {start_col}")
+            else:
+                self.string_output.append(f"\n✓ Pasted {original_len} chars at row {start_row}, col {start_col}")
+        else:
+            if '\n' in text:
+                self.string_output.append(f"\n✓ Imported {line_count} lines of ASCII art")
+            elif original_len < max_len:
+                self.string_output.append(f"\n✓ Imported {original_len} chars (padded to {max_len})")
+            elif original_len > max_len:
+                self.string_output.append(f"\n✓ Imported first {max_len} chars (truncated from {original_len})")
+            else:
+                self.string_output.append(f"\n✓ Imported {original_len} chars")
 
 
 if __name__ == '__main__':
@@ -451,4 +602,3 @@ if __name__ == '__main__':
     editor = LevelEditor()
     editor.show()
     sys.exit(app.exec())
-    
