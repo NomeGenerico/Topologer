@@ -1,61 +1,68 @@
 jmp main
 
-playerPos: var #1
-playerPrevPos: var #1
-playerOriginalPos: var #1
-playerMoveDirection: var #1
-playerOrientation: var #1
-
-moveBlocked : var #1 ; flag for box pushing functions
-
-StageData:  var #4    ; will store data for the stage /  0-3 layers to be loaded, HUD, Prop, Background, Behaviour. 4-Topology
-; will be used in the loading of a new stage or level. Its used to set all of the relevant Variables
-
-; Important Pointers
-currentUILayer: var #1
-currentPropLayer: var #1
-currentBackgroundLayer: var #1
-currentBehaviourLayer: var #1
-curentTopology: var #1
-
-; Render Data
-currentScreenIndexesChanged : var #1210
-currentScreenIndexesChangedIndex: var #1
+; MiscDeclarations
 
 
-; UI Data 
-UIStack : var #20 ; max of 20 ui elements
-UIStackPointer: var #1
-UICurentlySelectedElement: var #3 ;<ID, StartPos, EndPos>
-UIPreviousSelectedElement: var #3 ;<ID, StartPos, EndPos>
-UICurentlySelectedElementChanged: var #1 ; bool
+	playerPos: var #1
+	playerPrevPos: var #1
+	playerOriginalPos: var #1
+	playerMoveDirection: var #1
+	playerOrientation: var #1
 
-; ColorData
-uiLayerColor: var #1 
-propLayerColor: var #1
-backgroundLayerColor: var #1
-currentPrintingColor: var #1 ; 0 is the value for white, USE 1 FOR NO COLOR
+	moveBlocked : var #1 ; flag for box pushing functions
 
-static uiLayerColor, #0     
-static propLayerColor, #0
-static backgroundLayerColor, #0
+	StageData:  var #4    ; will store data for the stage /  0-3 layers to be loaded, HUD, Prop, Background, Behaviour. 4-Topology
+	; will be used in the loading of a new stage or level. Its used to set all of the relevant Variables
 
-static currentPrintingColor + #0 , 0
+	; Important Pointers
+	currentUILayer: var #1
+	currentPropLayer: var #1
+	currentBackgroundLayer: var #1
+	currentBehaviourLayer: var #1
+	curentTopology: var #1
 
-LayerProps : string "                                                                                                                                                                                                                                                                                                                                                                                       @@@@@@@                                 @     @                                 @     @                                 @     @                                 @     @                                 @     @                                 @@@@@@@                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  "
-LayerBackground : string "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                "
-LayerUI : var #1200
-LayerBehavior: var #1200
+	; Render Data
+	currentScreenIndexesChanged : var #1210
+	currentScreenIndexesChangedIndex: var #1
 
-InputedChar: var #1
-InputedCharBuffered: var #1
 
-ISUIActive: var #1 
-static ISUIActive + #0, #0
+	; UI Data 
+	UIStack : var #20 ; max of 20 ui elements
+	UIStackPointer: var #1
+	UICurentlySelectedElement: var #1 ;<ID>
+	UIPreviousSelectedElement: var #3 ;<ID>
+	UICurentlySelectedElementChanged: var #1 ; bool
+	UISignal: var #1
 
-inputDelay: var #1
-currentInputDelay: var #1
-static inputDelay, #100
+	; ColorData
+	uiLayerColor: var #1 
+	propLayerColor: var #1
+	backgroundLayerColor: var #1
+	currentPrintingColor: var #1 ; 0 is the value for white, USE 1 FOR NO COLOR
+
+	static uiLayerColor, #0     
+	static propLayerColor, #0
+	static backgroundLayerColor, #0
+
+	static currentPrintingColor + #0 , 0
+
+	LayerProps : string "                                                                                                                                                                                                                                                                                                                                                                                       @@@@@@@                                 @     @                                 @     @                                 @     @                                 @     @                                 @     @                                 @@@@@@@                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  "
+	LayerBackground : string "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                "
+	LayerUI : var #1200
+	LayerBehavior: var #1200
+
+	InputedChar: var #1
+	InputedCharBuffered: var #1
+
+	ISUIActive: var #1 
+	static ISUIActive + #0, #0
+
+	inputDelay: var #1
+	currentInputDelay: var #1
+	static inputDelay, #10
+
+	uIHighlightColor: var #1
+	static uIHighlightColor, #64512
 
 main:
 
@@ -88,7 +95,7 @@ main:
 			store UIStackPointer, r0
 
 		; Load Level 1
-			loadn r2, #Level1
+			loadn r2, #TestLevel
 			call LoadStage ; (r1)
 
 		; positions player in level
@@ -109,11 +116,12 @@ main:
 
 			call FullScreenPrint
 
-
 	mainLoop:
 
 		; Input
 		call InputHandler
+
+		; TODO: move delay logic outside input
 	
 		;GameUpdate
 
@@ -130,7 +138,7 @@ main:
 		;RenderLoop:
 			call render   ; makes it skip zeros in the UI Buffer, instead of the spaces
 
-	jmp mainLoop
+		jmp mainLoop
 
 InputHandler:                        ; TODO: Make Buffer hold more than one input, and execute on proper timing
 
@@ -149,19 +157,8 @@ InputHandler:                        ; TODO: Make Buffer hold more than one inpu
 	load r0, InputedCharBuffered
 	store InputedChar, r0
 
-	; if esc
-		loadn r1, #27 ; ESC
-		cmp r0, r1
-		jne SkipInputESCUIcall
-
-		loadn r0, #UIConfirmationPrompt
-		call UICall
-
-		loadn r0, #0
-		store InputedChar, r0
-
-		SkipInputESCUIcall:
-
+	loadn r1, #0
+	store InputedCharBuffered, r1
 	
 	load r0, inputDelay
 	store currentInputDelay, r0
@@ -212,6 +209,12 @@ movePlayer:
 		loadn r1, #1
 		cmp r0, r1
 		jeq MovePlayerUiSlip
+
+	; reset moveBlocked
+
+		loadn r0, #0
+		store moveBlocked,
+
 
 
 	load r0, playerPos
@@ -382,22 +385,22 @@ checkPushMovement:
 		sub r2, r0, r1 ; playerMoveDirection ; can be infered from r0 and r1
 		; r2 will become a movent direction
 	
-		;if r2 = 3
+		;if r2 = 3 (Left: -1 = 65535)
 			loadn r3, #65535
 			cmp r3, r2
 			jeq boxMvLeft
 	
-		;if r2 = 1
+		;if r2 = 1 (Right: +1)
 			loadn r3, #1 
 			cmp r3, r2
 			jeq boxMvRight
 
-		;if r2 = 2
-			loadn r3, #65496
+		;if r2 = 2 (Up: -40 = 65496)
+			loadn r3, #65496	
 			cmp r3, r2
 			jeq boxMvUp
 
-		;if r2 = 4
+		;if r2 = 4 (Down: +40)
 			loadn r3, #40
 			cmp r3, r2
 			jeq boxMvDown
@@ -453,15 +456,40 @@ checkPushMovement:
 
 		;r0, is the new position of the box, we must check if it is valid
 		;r1 is the previous position of the box
+
+		; if new position has Wall
+	
+		load r6, currentPropLayer
+		add r2, r6, r0 ; memory addres of r0 position in propLayer
+
+		loadi r4, r2
+		loadn r3, #'#'
+		cmp r4, r3
+		jne checkPushMovement_continue
+
+			loadn r3, #1
+			;store moveBlocked, r3 ; <--- Você pode querer armazenar moveBlocked aqui
+
+			jmp checkPushMovement_handleRecursion
+
+		checkPushMovement_continue:
+
+			call checkPushMovement
 		
-		call checkPushMovement
-		
+		checkPushMovement_handleRecursion: 
 		
 		;if valid
-		; MoveInMemory
-		call MoveInMemory
-	
-		call SetIndexChanged
+		load r3, moveBlocked
+		loadn r4, #1
+		cmp r3, r4
+		;jeq checkPushMovement_skipMove:
+
+			;MoveInMemory
+			call MoveInMemory
+		
+			call SetIndexChanged
+
+			checkPushMovement_skipMove:
 
 	endboxmv:
 	
@@ -595,7 +623,7 @@ mvTopology:
 				cmp r3, r5; 
 				jne verticalTorusWrap
 					
-				loadn r6, #5   ; debug
+				loadn r6, #5 
 				add r0, r0, r2		; correct line + 40 move down
 
 				jmp endmvTopoplogy
@@ -689,15 +717,17 @@ render:
 			jmp ScreenRenderIndex_Loop
 		jmp ScreenRenderIndexExit
 
+	jmp ScreenRenderIndexExit
+
 	; render UI ; workds the same as normal loop, but calls ScreenRenderUIIndex instead
-	ScreenRenderIndexUI:   ; should only be called 
+	ScreenRenderIndexUI:
 
 		loadn r0, #currentScreenIndexesChanged  	; Start address
 		load r2, currentScreenIndexesChangedIndex   ; End adddres
 
 		ScreenRenderIndexUI_loop:
 			cmp r0, r2
-			jeq ScreenRenderHighlightedUI ; if start and end are equal, exit the loop
+			jeq ScreenRenderIndexExit ; if start and end are equal, exit the loop
 
 			loadi r1, r0 ; gets index to render
 			call ScreenRenderUIIndex
@@ -705,65 +735,12 @@ render:
 			inc r0
 			jmp ScreenRenderIndexUI_loop
 
-	; render HighLighted IU Element
-	ScreenRenderHighlightedUI:
-
-		loadn r0, #currentScreenIndexesChanged     ; Previous UI Changes were already computed by ScreenRenderIndexUI
-		store currentScreenIndexesChangedIndex, r0
-		
-			; Check if render is needed
-				loadn r0, #0
-				load r1, UICurentlySelectedElementChanged ; has the element changed since last render?
-				cmp r0, r1
-					
-				jeq ScreenRenderHighlightedUI_skip ; if changed do:
-
-			; set screen index changed
-
-					loadn r0, #UICurentlySelectedElement  ; <ID, StartPos, EndPos>
-					inc r0 ; start pos
-					mov r2, r0
-					
-					inc r0
-					loadi r1, r0 ; set end pos
-
-					loadi r0, r2 ; set start pos
-
-					loadn r3, #0 ; set function to SetIndexChanged
-
-					call SquareFinder 	;<Start, End,    , FunctionID>
-
-			; set HighlightColor
-
-				loadn r0, #64512 ; should be the color blue
-				store currentPrintingColor, r0
-
-			; Actual Printing Loop
-
-				loadn r0, #currentScreenIndexesChanged  	; Start address
-				load r2, currentScreenIndexesChangedIndex   ; End adddres
-
-				ScreenRenderHighlightedUI_loop:
-					
-					; print again with highlight color
-
-					cmp r0, r2
-					jeq ScreenRenderIndexExit ; is the printing at the end.
-
-						loadi r1, r0 ; gets index to render
-
-						call ScreenRenderUIIndex
-
-						inc r0
-						jmp ScreenRenderIndexUI_loop
-
-			ScreenRenderHighlightedUI_skip:
-
-
-
-			jmp ScreenRenderIndexExit
 
 	ScreenRenderIndexExit:
+
+	; Unset Printing Color
+		loadn r0, #0 
+		store currentPrintingColor, r0
 
     ; Reset pointer to beginning
 		loadn r0, #currentScreenIndexesChanged
@@ -960,6 +937,7 @@ ScreenRenderUIIndex:   ; < ,ScreenIndex>        ; need to take a look
 	push r0
 	push r1
 	push r2
+	push r3
 
 	;load r0, currentUILayer
 	;r1 index to render
@@ -983,9 +961,78 @@ ScreenRenderUIIndex:   ; < ,ScreenIndex>        ; need to take a look
 	add r0, r0, r1 ; 
 	loadi r0, r0   ; gets value in the ui layer at index r1
 
-	add r0, r0, r2 ; gets colored character
+	; check if char = 0. 
+	; loadn r3, #0
+	; cmp r3, r0
+	; jeq ScreenRenderUIIndex_SkipZero
 
-	outchar r0, r1 ; outputs character r0 in position r1
+	add r0, r0, r2 ; gets colored character
+	outchar r0, r1 ; outputs character r0 in position r1 ; must check if it is a zero
+
+	ScreenRenderUIIndex_SkipZero:
+
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+
+	rts
+
+ScreenRenderUIChanged: 
+
+	push r0
+	push r1
+	push r2
+
+	loadn r0, #currentScreenIndexesChanged  	; Start address
+	load r2, currentScreenIndexesChangedIndex   ; End adddres
+
+		ScreenRenderUIChanged_loop:
+			cmp r0, r2
+			jeq ScreenRenderUIChanged_Exit ; if start and end are equal, exit the loop
+
+			loadi r1, r0 ; gets index to render
+			call ScreenRenderUIIndex
+
+			inc r0
+			jmp ScreenRenderUIChanged_loop
+
+	ScreenRenderUIChanged_Exit:
+
+	loadn r0, #currentScreenIndexesChanged
+	store currentScreenIndexesChangedIndex, r0
+
+
+	pop r2
+	pop r1
+	pop r0
+
+	rts
+
+ScreenRenderChanged: 
+
+	push r0
+	push r1
+	push r2
+
+	loadn r0, #currentScreenIndexesChanged  	; Start address
+	load r2, currentScreenIndexesChangedIndex   ; End adddres
+
+		ScreenRenderChanged_loop:
+			cmp r0, r2
+			jeq ScreenRenderChanged_Exit ; if start and end are equal, exit the loop
+
+			loadi r1, r0 ; gets index to render
+			call ScreenRenderIndex
+
+			inc r0
+			jmp ScreenRenderChanged_loop
+
+	ScreenRenderChanged_Exit:
+
+	loadn r0, #currentScreenIndexesChanged
+	store currentScreenIndexesChangedIndex, r0
+
 
 	pop r2
 	pop r1
@@ -1070,6 +1117,10 @@ RLEDecoder:   ; (r0 <- <r1>)
 	pop r0
 	rts
 
+IndirectCall:  ; <Function Address>
+    push r0
+    rts
+
 ;TODO:
 RLEEncoder:
 
@@ -1135,8 +1186,7 @@ SquareFinder: ;<Start, End> ; function must be an ID because there is no indirec
 	push r0 ; Start
 	push r1 ; 
 	push r2 ; const 40; Screen With
-	push r3 ; end
-
+	push r3 ; End
 	push r4 ; start x
 	push r5 ; start y
 	push r6 ; end x
@@ -1200,7 +1250,6 @@ UICall: 	; <UI element>  Pushes element in stack, Calls: UIDrawToBuffer, SquareF
 			; calls a UI element, and pushes the stack 
 			; takes r0 as the poiter to the UI element
 
-
 			push r0
 			push r1
 			push r2
@@ -1237,7 +1286,7 @@ UICall: 	; <UI element>  Pushes element in stack, Calls: UIDrawToBuffer, SquareF
 				;; r0 is still the start Index as UIDrawToBuffer preserves it
 				;; r1 must be end pos
 
-				dec r5 ; default color
+				dec r5 ; default color of element
 				dec r5 ; end pos
 
 				loadi r1, r5
@@ -1245,16 +1294,14 @@ UICall: 	; <UI element>  Pushes element in stack, Calls: UIDrawToBuffer, SquareF
 				loadn r3, #0
 				call SquareFinder  ; Updates currentScreenIndexesChanged
 
-				;call FullScreenUIPrint
-
 			; Pushing the element into the stack
 
 				load r1, UIStackPointer
 				inc r1   ; gets next addres in the stack
 
-				; gets UI element to add
-				dec r5 
-				dec r5
+				; gets UI element to add ; r5 is already the addres of the UIElement
+				dec r5  ; default color
+				dec r5  ; UIAddress
 				mov r0, r5
 
 				storei r1, r0
@@ -1263,9 +1310,14 @@ UICall: 	; <UI element>  Pushes element in stack, Calls: UIDrawToBuffer, SquareF
 			loadn r0, #1
 			store ISUIActive, r0
 
-			loadn r0, #currentScreenIndexesChanged
-			load r1, currentScreenIndexesChangedIndex
-			call Stack_getLength
+			; DEBUG
+				loadn r0, #currentScreenIndexesChanged
+				load r1, currentScreenIndexesChangedIndex
+				call Stack_getLength
+
+			loadn r0, #0
+			store UICurentlySelectedElement, r0
+			store UIPreviousSelectedElement, r0
 
 			pop r5
 			pop r4
@@ -1273,12 +1325,14 @@ UICall: 	; <UI element>  Pushes element in stack, Calls: UIDrawToBuffer, SquareF
 			pop r2
 			pop r1
 			pop r0
+
 	rts
 
 UIClose:
 
 	push r0
 	push r1
+	push r2
 
 	loadn r0, #0
 	loadn r1, #UICurentlySelectedElement
@@ -1288,7 +1342,8 @@ UIClose:
 	inc r1 
 	storei r1, r0 ; reset end
 
-	load r0, UIStackPointer
+	load r2, UIStackPointer
+	mov r0, r2
 	dec r0
 	store UIStackPointer, r0	
 
@@ -1299,19 +1354,223 @@ UIClose:
 		loadn r0, #0
 		store ISUIActive, r0
 
-		UIClose_UIIsStillActive:
+		; marks area for redraw
+
+		; r2 = stack Pointer
+		loadi r2, r2  ; UIObject
+		inc r2
+
+		loadi r0, r2
+		inc r2
+
+		loadi r1, r2
+
+		call SquareFinder
+
+		call ScreenRenderChanged
+
+
+		jmp UIClose_end
+
+	UIClose_UIIsStillActive:
+
+		; redraw UI Buffer
+
+
+		; Marks Area for redraw
+
+		; r2 = stack Pointer
+		loadi r2, r2  ; UIObject
+		inc r2
+
+		loadi r0, r2
+		inc r2
+
+		loadi r1, r2
+
+		loadn r0, #574
+		loadn r1, #667
+
+		call SquareFinder
+
+		call ScreenRenderChanged
+
+
+	UIClose_end:
 	
+	pop r2
 	pop r1
 	pop r0
 
 	rts
 
-TODO:
-UIRedraw:   ; <> Rebuilds UI Buffer from the stack  
-			; Travels the stack and reconstruncting the current UI Layer, Must be able to determine the size and all positions that must be redraw
-			; takes r0 and r1, as start and end position of the ui element. assumes a retengular element
-			; if it rebuilds and encounters a ui element that is a zero, it must go deeeper in the stack
-			; if the index is not zero, do not overide
+UIInteractibleElementComputeShift:  ;<Shift> 
+
+    push r1
+    push r2
+    push r3
+    push r4
+
+    load r1, UICurentlySelectedElement
+    store UIPreviousSelectedElement, r1 
+
+    load r2, UIStackPointer
+    loadi r2, r2
+    loadn r3, #5 
+    add r2, r2, r3
+    loadi r2, r2 ; r2 = InteractibleElementsNum
+
+    add r1, r1, r0 ; r1 = current + shift
+
+    ; check underflow
+    loadn r4, #65535
+    cmp r1, r4
+    jne UIElementComputeShift_Continue
+        mov r1, r2  ; r1 = InteractibleElementsNum - 1
+		dec r1
+
+    UIElementComputeShift_Continue:
+        mod r1, r1, r2 
+        store UICurentlySelectedElement, r1
+
+    pop r4
+    pop r3
+    pop r2
+    pop r1
+    rts
+
+UIInteractibleElementHighLightRender:   ; <UIElement>
+ 
+    push r0 ; UIElement
+	push r1 
+	push r2
+	push r3
+
+
+    ; get InteractibleElementsList
+
+		loadn r2, #6
+		add r0, r0, r2
+		loadi r0, r0 ; list of interactible elements
+
+	; Get Selected Element
+
+		load r1, UICurentlySelectedElement
+
+	push r0
+	; render
+
+		; Find Selected Element
+		
+			add r2, r0, r1 
+			loadi r2, r2    ; Selected Interactible Element   <Start, END, Func>
+			mov r5, r2
+
+			; render highlight
+
+				; set highlight color
+		
+					load r3, uIHighlightColor
+					store currentPrintingColor, r3
+
+				; Set currentScreenIndexesChanged
+
+					push r0
+					push r1
+
+					mov r2, r5
+					loadi r0, r2 ; start pos
+					inc r2
+					loadi r1, r2 ; end pos
+
+					mov r7, r1
+					mov r6, r0
+
+					call SquareFinder
+
+					pop r1
+					pop r0 
+
+				call ScreenRenderUIChanged
+
+	pop r0
+
+	; Repeat For UIPreviousSelectedElement
+
+		; Get Previous Selected Element
+
+			load r1, UIPreviousSelectedElement
+
+		; Find Selected Element
+			
+			add r2, r0, r1 
+			loadi r2, r2    ; Selected Interactible Element   <Start, END, Func>
+
+			; render highlight
+
+				; set Printing color
+		
+					load r3, uiLayerColor
+					store currentPrintingColor, r3
+
+				; Set currentScreenIndexesChanged
+
+					push r0
+					push r1
+
+					loadi r0, r2 ; start pos
+					inc r2
+					loadi r1, r2 ; end pos
+
+					call SquareFinder
+
+					pop r1
+					pop r0 
+
+				call ScreenRenderUIChanged
+
+
+
+
+	pop r3
+	pop r2
+	pop r1
+	pop r0
+
+	rts
+
+UISelectedInteractibleElementInteract: ; <UIElement>
+
+	push r0  ; UIElement
+	push r1
+	push r2
+
+	; get InteractibleElementsList
+
+		loadn r2, #6   
+		add r0, r0, r2
+		loadi r0, r0 ; list of interactible elements
+
+	; Get Selected Element
+
+		load r1, UICurentlySelectedElement
+
+	;  Find Selected Element
+		add r2, r0, r1 
+		loadi r2, r2    ; Selected Interactible Element   <Start, END, Func>
+
+	; GET Function 
+
+		loadn r0, #2
+		add r2, r2, r0
+		loadi r0, r2 ; Function
+
+		call IndirectCall  ; Call Function
+	
+	pop r2
+	pop r1
+	pop r0
+
 	rts
 
 UIDrawToBuffer:   ; <StartIndex, UIElemenent_RLE> 
@@ -1383,15 +1642,32 @@ UIHandeler:
 	loadn r0, #0
 	load r1, ISUIActive
 	cmp r0, r1
-	jeq UIHandeler_skip
+	jeq UIHandeler_notActive
 
-	load r0, UIStackPointer
-	loadi r0, r0 ; Ui element Address
-	loadi r0, r0 ; UIElement Function ID
+	; UI is active
 
-	call UICallJumpTable
+		load r0, UIStackPointer 
+		loadi r0, r0 ; Ui element addres
+		loadi r0, r0 ; UIFunction
 
-	UIHandeler_skip:
+		call IndirectCall
+
+		jmp UIHandler_exit
+
+	UIHandeler_notActive:
+
+		; if input is esc
+			load r0, InputedChar
+			loadn r1, #27 ; ESC
+			cmp r0, r1
+			jne UIHandeler_ESCUIcall
+
+			loadn r0, #UIConfirmationPrompt
+			call UICall
+
+			UIHandeler_ESCUIcall:
+
+	UIHandler_exit:
 
 	pop r1
 	pop r0
@@ -1404,121 +1680,80 @@ Stack_getLength: ;     Gets the diference between the stack start and the pointe
 	; r1 stack pointer
 
 	sub r0, r1, r0
-	mov r7, r0   ; r7 is will be the debuging register, be carefull with use in functions that operate on r7
 
 	rts
 
+TODO:
+UIRedraw:   ; <> Rebuilds UI Buffer from the stack  
+			; Travels the stack and reconstruncting the current UI Layer, Must be able to determine the size and all positions that must be redraw
+			; takes r0 and r1, as start and end position of the ui element. assumes a retengular element
+			; if it rebuilds and encounters a ui element that is a zero, it must go deeeper in the stack
+			; if the index is not zero, do not overide
+	rts
+
+
+
 ;--------- Behavior
-; The original idea with indirect calls will not work, there will be a need for a jump table
+; 
 ; 
 ; GameObject <sprite, SpriteLayer, Behavior FunctionID> ; FunctionID will simply be the sprite value, no need for a separate value
 ;                                                         Will leave this here so in the future i can implment a calli instruction
 ; 
 LoadGameObjects: ; Must be inserted in LoadStage
 
-;______________
-; jump tables: 
-
-	; Deprecated
-	;SquareFinderJumpTable:  ; r6 is screen index ; r3 is function id ; uses r2, which is reserved in Square finder, no current conflic but beware
-
-		push r0
-		push r2
-
-
-		loadn r2, #0 ; set screen index changed
-			cmp r2, r3
-			jne idzeroskip
-			call SetIndexChanged
-			idzeroskip:
-
-		; 
-
-
-		pop r2
-		pop r0
-
-		;jmp SquareFinderJumpTable_exit
-	; DEprecated
-
-	UICallJumpTable: 
-
-		push r2
-
-		loadn r2, #0 ;  must clean the stack
-		cmp r2, r0
-			jeq idUIskip
-
-		loadn r2, #1
-		cmp r2, r0
-			jne idUIoneskip
-			call UIConfirmationPromptFunction
-			idUIoneskip:
-
-		;UICallJumpTable_CheckNext:
-		; Add more UI elements here as needed
-    	; loadn r2, #2
-		; cmp r2, r0
-	    ; jne UICallJumpTable_CheckNext2
-    	;     call AnotherUIFunction
-    	;     jmp UICallJumpTable_exit
-
-    	; UICallJumpTable_CheckNext2:
-    	; etc...
-
-		
-		
-
-		idUIskip:
-
-		UICallJumpTable_exit:
-
-		pop r2
-
-		rts
-
-	BehaviorHandelerJumpTable: ; <ID - Sprite>
-
-		push r2
-
-		loadn r2, #'@'
-		cmp r2, r0
-			jne idboxskip
-			call SetIndexChanged
-			idboxskip:
-
-
-		pop r2
-		;jmp BehaviorHandelerJumpTable_exit
-
+; DATA TYPES
 ;____________________________________
-; UI Data  ; UI object : Var #5  <FunctionID, StartPos, EndPos, Color, RLE>
 
-	UIConfirmationPrompt: var #5 
+; List: Var #lenght   <Element>
 
-		static UIConfirmationPrompt + #0,  #1  ; id one    ;#UIConfirmationPromptFunction if i had calli
+; InteractibleElement: var #4 <ID, Start, End, Function>
+
+; UI Object : Var #6  <FunctionID, StartPos, EndPos, Color, RLE, InteractibleElementsNum ,InteractibleElementsList>
+
+; Layer : var #1200 
+
+; RLE : var#Lenght <Count, Object>
+
+; Level : Var #5  ;<HUD, Props, Background, Behavior, Topology>
+
+
+
+; Static Definitions
+;____________________________________
+; UI Data  ; UI object : Var #7  <Function, StartPos, EndPos, Color, RLE, InteractibleElementsNum ,InteractibleElementsList>
+
+	UIConfirmationPrompt: var #7
+
+		static UIConfirmationPrompt + #0,  #UIConfirmationPromptFunction
 		static UIConfirmationPrompt + #1, #574
 		static UIConfirmationPrompt + #2, #667
 		static UIConfirmationPrompt + #3, #0 ; white
 		static UIConfirmationPrompt + #4, #ConfirmationPromptRLE
+        static UIConfirmationPrompt + #5, #2
+        static UIConfirmationPrompt + #6, #UIConfirmationPromptInteractibleElementsList
 
-		UIConfirmationPromptFunction:   ; id 0
+		UIConfirmationPromptFunction:
 
 			push r0
-			push r1 ; where to "print", actualy we are puting it into the uiLayer
-			push r2 ; color
+			push r1
+			push r2
 			push r3
 
-			;
-
-				; handle the input given and executes logic
-
-				; Mark active options, in a first moment, only one single element should be active. 
-				; this element, will be drawn again in the render pass with a diferent color.
-				; might have to make this part of the render system, with a list of tuples of the elements, first element start, end, secondend element start, end...
-		
+			; Input
 
 				load r0, InputedChar
+
+				;DEBUG: display InputedChar value at position 1
+
+					push r1
+					push r2
+
+					mov r1, r0
+					loadn r2, #1
+					outchar r1, r2
+
+					pop r2
+					pop r1
 
 				;if a
 					loadn r1, #'a'  
@@ -1533,100 +1768,69 @@ LoadGameObjects: ; Must be inserted in LoadStage
 				;if esc:
 					loadn r1, #27 ; ESC
 					cmp r0, r1
-					jeq UIConfirmationPrompt_Exit
+					jeq UIConfirmationPromptFunction_IfESC
 
-				UIConfirmationPromptFunction_Ifa:
+				;if enter
+					loadn r1, #13 ; Enter
+					cmp r0, r1
+					jeq UIConfirmationPromptFunction_Ifenter
 
-					loadn r0, #65534 ; -1
+				;else:
+					jmp UIConfirmationPrompt_Continue
+
+				UIConfirmationPromptFunction_Ifa:		
+
+					loadn r1, #1
+					store UICurentlySelectedElementChanged, r1
+
+					loadn r0, #65535 ; -1 shift
 					jmp UIConfirmationPromptFunction_ResolveActive
-
+								
 				UIConfirmationPromptFunction_Ifd:
-				
-					loadn r0, #1
+
+					loadn r1, #1
+					store UICurentlySelectedElementChanged, r1
+							
+					loadn r0, #1 ; shift
 					jmp UIConfirmationPromptFunction_ResolveActive
 
-				UIConfirmationPromptFunction_ResolveActive:
-				;loadn r0, shift
-				load r1, UICurentlySelectedElement ; Always set this to zero when closing the UI
-				loadn r2, #2 ; number of elements
+				UIConfirmationPromptFunction_IfESC:
 
-				push r0
-				push r1
-				push r2
-				store UIPreviousSelectedElement, r1
-				; add data to currentScreenIndexesChanged
+					call UIClose
+					jmp UIConfirmationPrompt_Exit
 
-					loadn r2, #UICurentlySelectedElement
-					loadn r1, #UIPreviousSelectedElement
+				UIConfirmationPromptFunction_Ifenter:
 
-					loadi r0, r2 
-					storei r1, r0 ;id
-					inc r1 
-					inc r2
-					loadi r0, r2 
-					storei r1, r0 ;start
-					inc r1
-					inc r2 
-					loadi r0, r2 
-					storei r1, r0 ;end
-				pop r2
-				pop r1
-				pop r0
+					loadn r0, #UIConfirmationPrompt
+					call UISelectedInteractibleElementInteract
+					jmp UIConfirmationPrompt_Continue
 
+			UIConfirmationPromptFunction_ResolveActive:
 
+				call UIInteractibleElementComputeShift
 
-				add r1, r1, r0
-				mod r1, r1, r2
-
-				store UICurentlySelectedElement, r1
-				
-
-				; MarkingElement
-				;if UICurentlySelectedElement = 0
-					; "No"
-					loadn r2, #0
-					cmp r1, r2
-					jne UIConfirmationPromptFunction_UICurentlySelectedElementEQ1
-
-					loadn r1, #43 ; position of the N of the No
-					loadn r2, #44 ; position of the o of the No	
-
-					jmp UIConfirmationPromptFunction_MarkActive
-				
-
-				UIConfirmationPromptFunction_UICurentlySelectedElementEQ1:
-					;Yes
-
-					loadn r1, #47 ; position of the Y of the Yes
-					loadn r2, #49 ; position of the s of the Yes
-
-
-				UIConfirmationPromptFunction_MarkActive:
-				;load r0, Ui element position
-				
 				loadn r0, #UIConfirmationPrompt
-				inc r0
-				loadi r0, r0
+				call UIInteractibleElementHighLightRender
 
-				;Redraw Elements with new color:
-
-				add r1, r1, r0
-				add r2, r2, r0
-
-				loadn r0, #UICurentlySelectedElement
-				inc r0 
-				storei r0, r1 ; Update start
-				inc r0 
-				storei r0, r2 ; Update end
-
-			jmp UIConfirmationPrompt_Continue
-
-			UIConfirmationPrompt_Exit:
-
-
-				call UIClose
 
 			UIConfirmationPrompt_Continue:
+
+				;DEBUG: Force display UICurentlySelectedElement value at position 2
+
+					push r1
+					push r2
+
+					load r1, UICurentlySelectedElement
+					loadn r2, #48  ; ASCII '0'
+					add r1, r1, r2
+					loadn r2, #2
+					outchar r1, r2
+
+					pop r2
+					pop r1
+
+
+			UIConfirmationPrompt_Exit:
 
 			pop r3
 			pop r2
@@ -1634,7 +1838,7 @@ LoadGameObjects: ; Must be inserted in LoadStage
 			pop r0
 			rts
 
-		ConfirmationPromptRLE : var#39  ; 19 runs, 39 words total
+		ConfirmationPromptRLE : var #39  ; 19 runs, 39 words total
 
 			static ConfirmationPromptRLE + #0, #1      ; count
 			static ConfirmationPromptRLE + #1, #42    ; '*' (ASCII 42)
@@ -1673,204 +1877,648 @@ LoadGameObjects: ; Must be inserted in LoadStage
 			static ConfirmationPromptRLE + #34, #1      ; count
 			static ConfirmationPromptRLE + #35, #42    ; '*' (ASCII 42)
 			static ConfirmationPromptRLE + #36, #0      ; terminator
+
+        UIConfirmationPromptInteractibleElementsList: var #2
 		
-;MainMenu
+			; InteractibleElement <ID, Start, End, Function>
+			static UIConfirmationPromptInteractibleElementsList + #0, #UIConfirmationPromptInteractibleElementONE
+			static UIConfirmationPromptInteractibleElementsList + #1, #UIConfirmationPromptInteractibleElementTWO
 
-	TitleRLE : var #193  ; 96 runs, 193 words total
+				UIConfirmationPromptInteractibleElementONE: var #3
+					static UIConfirmationPromptInteractibleElementONE + #0, #617
+					static UIConfirmationPromptInteractibleElementONE + #1, #618
+					static UIConfirmationPromptInteractibleElementONE + #2, #UIConfirmationPromptInteractibleElementONE_Function ; FUNCTION
 
-		static TitleRLE + #0, #121      ; count
-		static TitleRLE + #1, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #2, #5      ; count
-		static TitleRLE + #3, #95    ; '_' (ASCII 95)
-		static TitleRLE + #4, #9      ; count
-		static TitleRLE + #5, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #6, #1      ; count
-		static TitleRLE + #7, #95    ; '_' (ASCII 95)
-		static TitleRLE + #8, #25      ; count
-		static TitleRLE + #9, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #10, #1      ; count
-		static TitleRLE + #11, #124    ; '|' (ASCII 124)
-		static TitleRLE + #12, #1      ; count
-		static TitleRLE + #13, #95    ; '_' (ASCII 95)
-		static TitleRLE + #14, #3      ; count
-		static TitleRLE + #15, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #16, #1      ; count
-		static TitleRLE + #17, #95    ; '_' (ASCII 95)
-		static TitleRLE + #18, #1      ; count
-		static TitleRLE + #19, #124    ; '|' (ASCII 124)
-		static TitleRLE + #20, #2      ; count
-		static TitleRLE + #21, #95    ; '_' (ASCII 95)
-		static TitleRLE + #22, #1      ; count
-		static TitleRLE + #23, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #24, #1      ; count
-		static TitleRLE + #25, #95    ; '_' (ASCII 95)
-		static TitleRLE + #26, #1      ; count
-		static TitleRLE + #27, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #28, #2      ; count
-		static TitleRLE + #29, #95    ; '_' (ASCII 95)
-		static TitleRLE + #30, #1      ; count
-		static TitleRLE + #31, #124    ; '|' (ASCII 124)
-		static TitleRLE + #32, #1      ; count
-		static TitleRLE + #33, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #34, #1      ; count
-		static TitleRLE + #35, #124    ; '|' (ASCII 124)
-		static TitleRLE + #36, #3      ; count
-		static TitleRLE + #37, #95    ; '_' (ASCII 95)
-		static TitleRLE + #38, #1      ; count
-		static TitleRLE + #39, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #40, #2      ; count
-		static TitleRLE + #41, #95    ; '_' (ASCII 95)
-		static TitleRLE + #42, #1      ; count
-		static TitleRLE + #43, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #44, #1      ; count
-		static TitleRLE + #45, #95    ; '_' (ASCII 95)
-		static TitleRLE + #46, #1      ; count
-		static TitleRLE + #47, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #48, #3      ; count
-		static TitleRLE + #49, #95    ; '_' (ASCII 95)
-		static TitleRLE + #50, #1      ; count
-		static TitleRLE + #51, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #52, #1      ; count
-		static TitleRLE + #53, #95    ; '_' (ASCII 95)
-		static TitleRLE + #54, #1      ; count
-		static TitleRLE + #55, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #56, #1      ; count
-		static TitleRLE + #57, #95    ; '_' (ASCII 95)
-		static TitleRLE + #58, #9      ; count
-		static TitleRLE + #59, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #60, #1      ; count
-		static TitleRLE + #61, #124    ; '|' (ASCII 124)
-		static TitleRLE + #62, #1      ; count
-		static TitleRLE + #63, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #64, #1      ; count
-		static TitleRLE + #65, #124    ; '|' (ASCII 124)
-		static TitleRLE + #66, #1      ; count
-		static TitleRLE + #67, #47    ; '/' (ASCII 47)
-		static TitleRLE + #68, #1      ; count
-		static TitleRLE + #69, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #70, #1      ; count
-		static TitleRLE + #71, #95    ; '_' (ASCII 95)
-		static TitleRLE + #72, #1      ; count
-		static TitleRLE + #73, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #74, #1      ; count
-		static TitleRLE + #75, #92    ; '\' (ASCII 92)
-		static TitleRLE + #76, #1      ; count
-		static TitleRLE + #77, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #78, #1      ; count
-		static TitleRLE + #79, #39    ; ''' (ASCII 39)
-		static TitleRLE + #80, #1      ; count
-		static TitleRLE + #81, #95    ; '_' (ASCII 95)
-		static TitleRLE + #82, #1      ; count
-		static TitleRLE + #83, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #84, #1      ; count
-		static TitleRLE + #85, #92    ; '\' (ASCII 92)
-		static TitleRLE + #86, #1      ; count
-		static TitleRLE + #87, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #88, #1      ; count
-		static TitleRLE + #89, #47    ; '/' (ASCII 47)
-		static TitleRLE + #90, #1      ; count
-		static TitleRLE + #91, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #92, #1      ; count
-		static TitleRLE + #93, #95    ; '_' (ASCII 95)
-		static TitleRLE + #94, #1      ; count
-		static TitleRLE + #95, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #96, #1      ; count
-		static TitleRLE + #97, #92    ; '\' (ASCII 92)
-		static TitleRLE + #98, #1      ; count
-		static TitleRLE + #99, #47    ; '/' (ASCII 47)
-		static TitleRLE + #100, #1      ; count
-		static TitleRLE + #101, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #102, #1      ; count
-		static TitleRLE + #103, #95    ; '_' (ASCII 95)
-		static TitleRLE + #104, #1      ; count
-		static TitleRLE + #105, #96    ; '`' (ASCII 96)
-		static TitleRLE + #106, #1      ; count
-		static TitleRLE + #107, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #108, #1      ; count
-		static TitleRLE + #109, #47    ; '/' (ASCII 47)
-		static TitleRLE + #110, #1      ; count
-		static TitleRLE + #111, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #112, #1      ; count
-		static TitleRLE + #113, #45    ; '-' (ASCII 45)
-		static TitleRLE + #114, #1      ; count
-		static TitleRLE + #115, #95    ; '_' (ASCII 95)
-		static TitleRLE + #116, #1      ; count
-		static TitleRLE + #117, #41    ; ')' (ASCII 41)
-		static TitleRLE + #118, #1      ; count
-		static TitleRLE + #119, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #120, #1      ; count
-		static TitleRLE + #121, #39    ; ''' (ASCII 39)
-		static TitleRLE + #122, #1      ; count
-		static TitleRLE + #123, #95    ; '_' (ASCII 95)
-		static TitleRLE + #124, #1      ; count
-		static TitleRLE + #125, #124    ; '|' (ASCII 124)
-		static TitleRLE + #126, #7      ; count
-		static TitleRLE + #127, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #128, #1      ; count
-		static TitleRLE + #129, #124    ; '|' (ASCII 124)
-		static TitleRLE + #130, #1      ; count
-		static TitleRLE + #131, #95    ; '_' (ASCII 95)
-		static TitleRLE + #132, #1      ; count
-		static TitleRLE + #133, #124    ; '|' (ASCII 124)
-		static TitleRLE + #134, #1      ; count
-		static TitleRLE + #135, #92    ; '\' (ASCII 92)
-		static TitleRLE + #136, #3      ; count
-		static TitleRLE + #137, #95    ; '_' (ASCII 95)
-		static TitleRLE + #138, #1      ; count
-		static TitleRLE + #139, #47    ; '/' (ASCII 47)
-		static TitleRLE + #140, #1      ; count
-		static TitleRLE + #141, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #142, #1      ; count
-		static TitleRLE + #143, #46    ; '.' (ASCII 46)
-		static TitleRLE + #144, #2      ; count
-		static TitleRLE + #145, #95    ; '_' (ASCII 95)
-		static TitleRLE + #146, #1      ; count
-		static TitleRLE + #147, #47    ; '/' (ASCII 47)
-		static TitleRLE + #148, #1      ; count
-		static TitleRLE + #149, #95    ; '_' (ASCII 95)
-		static TitleRLE + #150, #1      ; count
-		static TitleRLE + #151, #92    ; '\' (ASCII 92)
-		static TitleRLE + #152, #3      ; count
-		static TitleRLE + #153, #95    ; '_' (ASCII 95)
-		static TitleRLE + #154, #1      ; count
-		static TitleRLE + #155, #47    ; '/' (ASCII 47)
-		static TitleRLE + #156, #1      ; count
-		static TitleRLE + #157, #92    ; '\' (ASCII 92)
-		static TitleRLE + #158, #2      ; count
-		static TitleRLE + #159, #95    ; '_' (ASCII 95)
-		static TitleRLE + #160, #1      ; count
-		static TitleRLE + #161, #44    ; ',' (ASCII 44)
-		static TitleRLE + #162, #1      ; count
-		static TitleRLE + #163, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #164, #1      ; count
-		static TitleRLE + #165, #92    ; '\' (ASCII 92)
-		static TitleRLE + #166, #3      ; count
-		static TitleRLE + #167, #95    ; '_' (ASCII 95)
-		static TitleRLE + #168, #1      ; count
-		static TitleRLE + #169, #124    ; '|' (ASCII 124)
-		static TitleRLE + #170, #1      ; count
-		static TitleRLE + #171, #95    ; '_' (ASCII 95)
-		static TitleRLE + #172, #1      ; count
-		static TitleRLE + #173, #124    ; '|' (ASCII 124)
-		static TitleRLE + #174, #16      ; count
-		static TitleRLE + #175, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #176, #1      ; count
-		static TitleRLE + #177, #124    ; '|' (ASCII 124)
-		static TitleRLE + #178, #1      ; count
-		static TitleRLE + #179, #95    ; '_' (ASCII 95)
-		static TitleRLE + #180, #1      ; count
-		static TitleRLE + #181, #124    ; '|' (ASCII 124)
-		static TitleRLE + #182, #9      ; count
-		static TitleRLE + #183, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #184, #1      ; count
-		static TitleRLE + #185, #124    ; '|' (ASCII 124)
-		static TitleRLE + #186, #3      ; count
-		static TitleRLE + #187, #95    ; '_' (ASCII 95)
-		static TitleRLE + #188, #1      ; count
-		static TitleRLE + #189, #47    ; '/' (ASCII 47)
-		static TitleRLE + #190, #893      ; count
-		static TitleRLE + #191, #32    ; ' ' (ASCII 32)
-		static TitleRLE + #192, #0      ; terminator	
+					UIConfirmationPromptInteractibleElementONE_Function:
+						call UIClose
+						rts
+
+				UIConfirmationPromptInteractibleElementTWO: var #3
+					static UIConfirmationPromptInteractibleElementTWO + #0, #621
+					static UIConfirmationPromptInteractibleElementTWO + #1, #624
+					static UIConfirmationPromptInteractibleElementTWO + #2, #UIConfirmationPromptInteractibleElementTWO_Function ; FUNCTION
+
+					UIConfirmationPromptInteractibleElementTWO_Function:
+
+						push r0
+						loadn r0, #1
+						store UISignal, r0
+						pop r0
+
+						call UIClose
+
+						rts
+
+
+    ;MainMenu
+
+		MainMenu: var #7
+
+			static MainMenu + #0,  #MainMenuFunction
+			static MainMenu + #1, #0
+			static MainMenu + #2, #1999
+			static MainMenu + #3, #0 ; white
+			static MainMenu + #4, #MainMenuRLE
+			static MainMenu + #5, #2
+			static MainMenu + #6, #MainMenuInteractibleElementsList
+
+			MainMenuFunction:
+
+				push r0
+				push r1
+				push r2
+				push r3
+
+				; Input
+
+					load r0, InputedChar
+
+					;DEBUG: display InputedChar value at position 1
+
+						push r1
+						push r2
+
+						mov r1, r0
+						loadn r2, #1
+						outchar r1, r2
+
+						pop r2
+						pop r1
+
+					;if a
+						loadn r1, #'a'  
+						cmp r0, r1
+						jeq MainMenuFunction_Ifa
+
+					;if d
+						loadn r1, #'d'  
+						cmp r0, r1
+						jeq MainMenuFunction_Ifd
+
+					;if esc:
+						loadn r1, #27 ; ESC
+						cmp r0, r1
+						jeq MainMenuFunction_IfESC
+
+					;if enter
+						loadn r1, #13 ; Enter
+						cmp r0, r1
+						jeq MainMenuFunction_Ifenter
+
+					;else:
+						jmp MainMenu_Continue
+
+					MainMenuFunction_Ifa:		
+
+						loadn r1, #1
+						store UICurentlySelectedElementChanged, r1
+
+						loadn r0, #65535 ; -1 shift
+						jmp MainMenuFunction_ResolveActive
+									
+					MainMenuFunction_Ifd:
+
+						loadn r1, #1
+						store UICurentlySelectedElementChanged, r1
+								
+						loadn r0, #1 ; shift
+						jmp MainMenuFunction_ResolveActive
+
+					MainMenuFunction_IfESC:
+
+						call UIClose
+						jmp MainMenu_Exit
+
+					MainMenuFunction_Ifenter:
+
+						loadn r0, #MainMenu
+						call UISelectedInteractibleElementInteract
+						jmp MainMenu_Continue
+
+				MainMenuFunction_ResolveActive:
+
+					call UIInteractibleElementComputeShift
+
+					loadn r0, #MainMenu
+					call UIInteractibleElementHighLightRender
+
+
+				MainMenu_Continue:
+
+					;DEBUG: Force display UICurentlySelectedElement value at position 2
+
+						push r1
+						push r2
+
+						load r1, UICurentlySelectedElement
+						loadn r2, #48  ; ASCII '0'
+						add r1, r1, r2
+						loadn r2, #2
+						outchar r1, r2
+
+						pop r2
+						pop r1
+
+				MainMenu_Exit:
+
+				pop r3
+				pop r2
+				pop r1
+				pop r0
+				rts
+
+
+			MainMenuRLE : var #285  ; 142 runs, 285 words total
+
+				; Original: 1200 words, RLE: 285 words, saved 76.2%
+				; RLE encoded level data
+
+				static MainMenuRLE + #0, #84      ; count
+				static MainMenuRLE + #1, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #2, #6      ; count
+				static MainMenuRLE + #3, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #4, #7      ; count
+				static MainMenuRLE + #5, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #6, #3      ; count
+				static MainMenuRLE + #7, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #8, #23      ; count
+				static MainMenuRLE + #9, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #10, #1      ; count
+				static MainMenuRLE + #11, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #12, #1      ; count
+				static MainMenuRLE + #13, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #14, #2      ; count
+				static MainMenuRLE + #15, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #16, #2      ; count
+				static MainMenuRLE + #17, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #18, #1      ; count
+				static MainMenuRLE + #19, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #20, #1      ; count
+				static MainMenuRLE + #21, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #22, #3      ; count
+				static MainMenuRLE + #23, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #24, #1      ; count
+				static MainMenuRLE + #25, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #26, #2      ; count
+				static MainMenuRLE + #27, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #28, #1      ; count
+				static MainMenuRLE + #29, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #30, #1      ; count
+				static MainMenuRLE + #31, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #32, #1      ; count
+				static MainMenuRLE + #33, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #34, #1      ; count
+				static MainMenuRLE + #35, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #36, #3      ; count
+				static MainMenuRLE + #37, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #38, #1      ; count
+				static MainMenuRLE + #39, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #40, #3      ; count
+				static MainMenuRLE + #41, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #42, #2      ; count
+				static MainMenuRLE + #43, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #44, #3      ; count
+				static MainMenuRLE + #45, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #46, #1      ; count
+				static MainMenuRLE + #47, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #48, #3      ; count
+				static MainMenuRLE + #49, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #50, #7      ; count
+				static MainMenuRLE + #51, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #52, #1      ; count
+				static MainMenuRLE + #53, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #54, #1      ; count
+				static MainMenuRLE + #55, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #56, #1      ; count
+				static MainMenuRLE + #57, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #58, #1      ; count
+				static MainMenuRLE + #59, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #60, #1      ; count
+				static MainMenuRLE + #61, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #62, #1      ; count
+				static MainMenuRLE + #63, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #64, #1      ; count
+				static MainMenuRLE + #65, #92    ; '\' (ASCII 92)
+				static MainMenuRLE + #66, #1      ; count
+				static MainMenuRLE + #67, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #68, #1      ; count
+				static MainMenuRLE + #69, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #70, #1      ; count
+				static MainMenuRLE + #71, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #72, #1      ; count
+				static MainMenuRLE + #73, #92    ; '\' (ASCII 92)
+				static MainMenuRLE + #74, #1      ; count
+				static MainMenuRLE + #75, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #76, #1      ; count
+				static MainMenuRLE + #77, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #78, #1      ; count
+				static MainMenuRLE + #79, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #80, #1      ; count
+				static MainMenuRLE + #81, #92    ; '\' (ASCII 92)
+				static MainMenuRLE + #82, #1      ; count
+				static MainMenuRLE + #83, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #84, #1      ; count
+				static MainMenuRLE + #85, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #86, #1      ; count
+				static MainMenuRLE + #87, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #88, #1      ; count
+				static MainMenuRLE + #89, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #90, #1      ; count
+				static MainMenuRLE + #91, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #92, #1      ; count
+				static MainMenuRLE + #93, #92    ; '\' (ASCII 92)
+				static MainMenuRLE + #94, #1      ; count
+				static MainMenuRLE + #95, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #96, #1      ; count
+				static MainMenuRLE + #97, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #98, #1      ; count
+				static MainMenuRLE + #99, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #100, #1      ; count
+				static MainMenuRLE + #101, #96    ; '`' (ASCII 96)
+				static MainMenuRLE + #102, #1      ; count
+				static MainMenuRLE + #103, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #104, #1      ; count
+				static MainMenuRLE + #105, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #106, #1      ; count
+				static MainMenuRLE + #107, #45    ; '-' (ASCII 45)
+				static MainMenuRLE + #108, #1      ; count
+				static MainMenuRLE + #109, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #110, #1      ; count
+				static MainMenuRLE + #111, #41    ; ')' (ASCII 41)
+				static MainMenuRLE + #112, #1      ; count
+				static MainMenuRLE + #113, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #114, #1      ; count
+				static MainMenuRLE + #115, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #116, #1      ; count
+				static MainMenuRLE + #117, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #118, #6      ; count
+				static MainMenuRLE + #119, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #120, #1      ; count
+				static MainMenuRLE + #121, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #122, #1      ; count
+				static MainMenuRLE + #123, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #124, #1      ; count
+				static MainMenuRLE + #125, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #126, #1      ; count
+				static MainMenuRLE + #127, #92    ; '\' (ASCII 92)
+				static MainMenuRLE + #128, #3      ; count
+				static MainMenuRLE + #129, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #130, #1      ; count
+				static MainMenuRLE + #131, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #132, #1      ; count
+				static MainMenuRLE + #133, #46    ; '.' (ASCII 46)
+				static MainMenuRLE + #134, #2      ; count
+				static MainMenuRLE + #135, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #136, #1      ; count
+				static MainMenuRLE + #137, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #138, #3      ; count
+				static MainMenuRLE + #139, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #140, #1      ; count
+				static MainMenuRLE + #141, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #142, #2      ; count
+				static MainMenuRLE + #143, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #144, #1      ; count
+				static MainMenuRLE + #145, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #146, #2      ; count
+				static MainMenuRLE + #147, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #148, #1      ; count
+				static MainMenuRLE + #149, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #150, #1      ; count
+				static MainMenuRLE + #151, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #152, #1      ; count
+				static MainMenuRLE + #153, #44    ; ',' (ASCII 44)
+				static MainMenuRLE + #154, #1      ; count
+				static MainMenuRLE + #155, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #156, #1      ; count
+				static MainMenuRLE + #157, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #158, #1      ; count
+				static MainMenuRLE + #159, #92    ; '\' (ASCII 92)
+				static MainMenuRLE + #160, #2      ; count
+				static MainMenuRLE + #161, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #162, #1      ; count
+				static MainMenuRLE + #163, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #164, #1      ; count
+				static MainMenuRLE + #165, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #166, #1      ; count
+				static MainMenuRLE + #167, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #168, #13      ; count
+				static MainMenuRLE + #169, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #170, #1      ; count
+				static MainMenuRLE + #171, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #172, #1      ; count
+				static MainMenuRLE + #173, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #174, #1      ; count
+				static MainMenuRLE + #175, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #176, #12      ; count
+				static MainMenuRLE + #177, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #178, #1      ; count
+				static MainMenuRLE + #179, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #180, #3      ; count
+				static MainMenuRLE + #181, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #182, #1      ; count
+				static MainMenuRLE + #183, #47    ; '/' (ASCII 47)
+				static MainMenuRLE + #184, #184      ; count
+				static MainMenuRLE + #185, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #186, #1      ; count
+				static MainMenuRLE + #187, #42    ; '*' (ASCII 42)
+				static MainMenuRLE + #188, #14      ; count
+				static MainMenuRLE + #189, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #190, #1      ; count
+				static MainMenuRLE + #191, #42    ; '*' (ASCII 42)
+				static MainMenuRLE + #192, #24      ; count
+				static MainMenuRLE + #193, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #194, #1      ; count
+				static MainMenuRLE + #195, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #196, #14      ; count
+				static MainMenuRLE + #197, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #198, #1      ; count
+				static MainMenuRLE + #199, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #200, #24      ; count
+				static MainMenuRLE + #201, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #202, #1      ; count
+				static MainMenuRLE + #203, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #204, #2      ; count
+				static MainMenuRLE + #205, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #206, #1      ; count
+				static MainMenuRLE + #207, #78    ; 'N' (ASCII 78)
+				static MainMenuRLE + #208, #1      ; count
+				static MainMenuRLE + #209, #69    ; 'E' (ASCII 69)
+				static MainMenuRLE + #210, #1      ; count
+				static MainMenuRLE + #211, #87    ; 'W' (ASCII 87)
+				static MainMenuRLE + #212, #3      ; count
+				static MainMenuRLE + #213, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #214, #1      ; count
+				static MainMenuRLE + #215, #71    ; 'G' (ASCII 71)
+				static MainMenuRLE + #216, #1      ; count
+				static MainMenuRLE + #217, #65    ; 'A' (ASCII 65)
+				static MainMenuRLE + #218, #1      ; count
+				static MainMenuRLE + #219, #77    ; 'M' (ASCII 77)
+				static MainMenuRLE + #220, #1      ; count
+				static MainMenuRLE + #221, #69    ; 'E' (ASCII 69)
+				static MainMenuRLE + #222, #2      ; count
+				static MainMenuRLE + #223, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #224, #1      ; count
+				static MainMenuRLE + #225, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #226, #24      ; count
+				static MainMenuRLE + #227, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #228, #1      ; count
+				static MainMenuRLE + #229, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #230, #14      ; count
+				static MainMenuRLE + #231, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #232, #1      ; count
+				static MainMenuRLE + #233, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #234, #24      ; count
+				static MainMenuRLE + #235, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #236, #1      ; count
+				static MainMenuRLE + #237, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #238, #1      ; count
+				static MainMenuRLE + #239, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #240, #1      ; count
+				static MainMenuRLE + #241, #67    ; 'C' (ASCII 67)
+				static MainMenuRLE + #242, #1      ; count
+				static MainMenuRLE + #243, #72    ; 'H' (ASCII 72)
+				static MainMenuRLE + #244, #1      ; count
+				static MainMenuRLE + #245, #79    ; 'O' (ASCII 79)
+				static MainMenuRLE + #246, #1      ; count
+				static MainMenuRLE + #247, #83    ; 'S' (ASCII 83)
+				static MainMenuRLE + #248, #1      ; count
+				static MainMenuRLE + #249, #69    ; 'E' (ASCII 69)
+				static MainMenuRLE + #250, #2      ; count
+				static MainMenuRLE + #251, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #252, #1      ; count
+				static MainMenuRLE + #253, #76    ; 'L' (ASCII 76)
+				static MainMenuRLE + #254, #1      ; count
+				static MainMenuRLE + #255, #69    ; 'E' (ASCII 69)
+				static MainMenuRLE + #256, #1      ; count
+				static MainMenuRLE + #257, #86    ; 'V' (ASCII 86)
+				static MainMenuRLE + #258, #1      ; count
+				static MainMenuRLE + #259, #69    ; 'E' (ASCII 69)
+				static MainMenuRLE + #260, #1      ; count
+				static MainMenuRLE + #261, #76    ; 'L' (ASCII 76)
+				static MainMenuRLE + #262, #1      ; count
+				static MainMenuRLE + #263, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #264, #1      ; count
+				static MainMenuRLE + #265, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #266, #24      ; count
+				static MainMenuRLE + #267, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #268, #1      ; count
+				static MainMenuRLE + #269, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #270, #14      ; count
+				static MainMenuRLE + #271, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #272, #1      ; count
+				static MainMenuRLE + #273, #124    ; '|' (ASCII 124)
+				static MainMenuRLE + #274, #24      ; count
+				static MainMenuRLE + #275, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #276, #1      ; count
+				static MainMenuRLE + #277, #42    ; '*' (ASCII 42)
+				static MainMenuRLE + #278, #14      ; count
+				static MainMenuRLE + #279, #95    ; '_' (ASCII 95)
+				static MainMenuRLE + #280, #1      ; count
+				static MainMenuRLE + #281, #42    ; '*' (ASCII 42)
+				static MainMenuRLE + #282, #492      ; count
+				static MainMenuRLE + #283, #32    ; ' ' (ASCII 32)
+				static MainMenuRLE + #284, #0      ; terminator
+
+			MainMenuInteractibleElementsList:
+
+
+
+
+        TitleRLE : var #193  ; 96 runs, 193 words total
+
+            static TitleRLE + #0, #121      ; count
+            static TitleRLE + #1, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #2, #5      ; count
+            static TitleRLE + #3, #95    ; '_' (ASCII 95)
+            static TitleRLE + #4, #9      ; count
+            static TitleRLE + #5, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #6, #1      ; count
+            static TitleRLE + #7, #95    ; '_' (ASCII 95)
+            static TitleRLE + #8, #25      ; count
+            static TitleRLE + #9, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #10, #1      ; count
+            static TitleRLE + #11, #124    ; '|' (ASCII 124)
+            static TitleRLE + #12, #1      ; count
+            static TitleRLE + #13, #95    ; '_' (ASCII 95)
+            static TitleRLE + #14, #3      ; count
+            static TitleRLE + #15, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #16, #1      ; count
+            static TitleRLE + #17, #95    ; '_' (ASCII 95)
+            static TitleRLE + #18, #1      ; count
+            static TitleRLE + #19, #124    ; '|' (ASCII 124)
+            static TitleRLE + #20, #2      ; count
+            static TitleRLE + #21, #95    ; '_' (ASCII 95)
+            static TitleRLE + #22, #1      ; count
+            static TitleRLE + #23, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #24, #1      ; count
+            static TitleRLE + #25, #95    ; '_' (ASCII 95)
+            static TitleRLE + #26, #1      ; count
+            static TitleRLE + #27, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #28, #2      ; count
+            static TitleRLE + #29, #95    ; '_' (ASCII 95)
+            static TitleRLE + #30, #1      ; count
+            static TitleRLE + #31, #124    ; '|' (ASCII 124)
+            static TitleRLE + #32, #1      ; count
+            static TitleRLE + #33, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #34, #1      ; count
+            static TitleRLE + #35, #124    ; '|' (ASCII 124)
+            static TitleRLE + #36, #3      ; count
+            static TitleRLE + #37, #95    ; '_' (ASCII 95)
+            static TitleRLE + #38, #1      ; count
+            static TitleRLE + #39, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #40, #2      ; count
+            static TitleRLE + #41, #95    ; '_' (ASCII 95)
+            static TitleRLE + #42, #1      ; count
+            static TitleRLE + #43, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #44, #1      ; count
+            static TitleRLE + #45, #95    ; '_' (ASCII 95)
+            static TitleRLE + #46, #1      ; count
+            static TitleRLE + #47, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #48, #3      ; count
+            static TitleRLE + #49, #95    ; '_' (ASCII 95)
+            static TitleRLE + #50, #1      ; count
+            static TitleRLE + #51, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #52, #1      ; count
+            static TitleRLE + #53, #95    ; '_' (ASCII 95)
+            static TitleRLE + #54, #1      ; count
+            static TitleRLE + #55, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #56, #1      ; count
+            static TitleRLE + #57, #95    ; '_' (ASCII 95)
+            static TitleRLE + #58, #9      ; count
+            static TitleRLE + #59, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #60, #1      ; count
+            static TitleRLE + #61, #124    ; '|' (ASCII 124)
+            static TitleRLE + #62, #1      ; count
+            static TitleRLE + #63, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #64, #1      ; count
+            static TitleRLE + #65, #124    ; '|' (ASCII 124)
+            static TitleRLE + #66, #1      ; count
+            static TitleRLE + #67, #47    ; '/' (ASCII 47)
+            static TitleRLE + #68, #1      ; count
+            static TitleRLE + #69, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #70, #1      ; count
+            static TitleRLE + #71, #95    ; '_' (ASCII 95)
+            static TitleRLE + #72, #1      ; count
+            static TitleRLE + #73, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #74, #1      ; count
+            static TitleRLE + #75, #92    ; '\' (ASCII 92)
+            static TitleRLE + #76, #1      ; count
+            static TitleRLE + #77, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #78, #1      ; count
+            static TitleRLE + #79, #39    ; ''' (ASCII 39)
+            static TitleRLE + #80, #1      ; count
+            static TitleRLE + #81, #95    ; '_' (ASCII 95)
+            static TitleRLE + #82, #1      ; count
+            static TitleRLE + #83, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #84, #1      ; count
+            static TitleRLE + #85, #92    ; '\' (ASCII 92)
+            static TitleRLE + #86, #1      ; count
+            static TitleRLE + #87, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #88, #1      ; count
+            static TitleRLE + #89, #47    ; '/' (ASCII 47)
+            static TitleRLE + #90, #1      ; count
+            static TitleRLE + #91, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #92, #1      ; count
+            static TitleRLE + #93, #95    ; '_' (ASCII 95)
+            static TitleRLE + #94, #1      ; count
+            static TitleRLE + #95, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #96, #1      ; count
+            static TitleRLE + #97, #92    ; '\' (ASCII 92)
+            static TitleRLE + #98, #1      ; count
+            static TitleRLE + #99, #47    ; '/' (ASCII 47)
+            static TitleRLE + #100, #1      ; count
+            static TitleRLE + #101, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #102, #1      ; count
+            static TitleRLE + #103, #95    ; '_' (ASCII 95)
+            static TitleRLE + #104, #1      ; count
+            static TitleRLE + #105, #96    ; '`' (ASCII 96)
+            static TitleRLE + #106, #1      ; count
+            static TitleRLE + #107, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #108, #1      ; count
+            static TitleRLE + #109, #47    ; '/' (ASCII 47)
+            static TitleRLE + #110, #1      ; count
+            static TitleRLE + #111, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #112, #1      ; count
+            static TitleRLE + #113, #45    ; '-' (ASCII 45)
+            static TitleRLE + #114, #1      ; count
+            static TitleRLE + #115, #95    ; '_' (ASCII 95)
+            static TitleRLE + #116, #1      ; count
+            static TitleRLE + #117, #41    ; ')' (ASCII 41)
+            static TitleRLE + #118, #1      ; count
+            static TitleRLE + #119, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #120, #1      ; count
+            static TitleRLE + #121, #39    ; ''' (ASCII 39)
+            static TitleRLE + #122, #1      ; count
+            static TitleRLE + #123, #95    ; '_' (ASCII 95)
+            static TitleRLE + #124, #1      ; count
+            static TitleRLE + #125, #124    ; '|' (ASCII 124)
+            static TitleRLE + #126, #7      ; count
+            static TitleRLE + #127, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #128, #1      ; count
+            static TitleRLE + #129, #124    ; '|' (ASCII 124)
+            static TitleRLE + #130, #1      ; count
+            static TitleRLE + #131, #95    ; '_' (ASCII 95)
+            static TitleRLE + #132, #1      ; count
+            static TitleRLE + #133, #124    ; '|' (ASCII 124)
+            static TitleRLE + #134, #1      ; count
+            static TitleRLE + #135, #92    ; '\' (ASCII 92)
+            static TitleRLE + #136, #3      ; count
+            static TitleRLE + #137, #95    ; '_' (ASCII 95)
+            static TitleRLE + #138, #1      ; count
+            static TitleRLE + #139, #47    ; '/' (ASCII 47)
+            static TitleRLE + #140, #1      ; count
+            static TitleRLE + #141, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #142, #1      ; count
+            static TitleRLE + #143, #46    ; '.' (ASCII 46)
+            static TitleRLE + #144, #2      ; count
+            static TitleRLE + #145, #95    ; '_' (ASCII 95)
+            static TitleRLE + #146, #1      ; count
+            static TitleRLE + #147, #47    ; '/' (ASCII 47)
+            static TitleRLE + #148, #1      ; count
+            static TitleRLE + #149, #95    ; '_' (ASCII 95)
+            static TitleRLE + #150, #1      ; count
+            static TitleRLE + #151, #92    ; '\' (ASCII 92)
+            static TitleRLE + #152, #3      ; count
+            static TitleRLE + #153, #95    ; '_' (ASCII 95)
+            static TitleRLE + #154, #1      ; count
+            static TitleRLE + #155, #47    ; '/' (ASCII 47)
+            static TitleRLE + #156, #1      ; count
+            static TitleRLE + #157, #92    ; '\' (ASCII 92)
+            static TitleRLE + #158, #2      ; count
+            static TitleRLE + #159, #95    ; '_' (ASCII 95)
+            static TitleRLE + #160, #1      ; count
+            static TitleRLE + #161, #44    ; ',' (ASCII 44)
+            static TitleRLE + #162, #1      ; count
+            static TitleRLE + #163, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #164, #1      ; count
+            static TitleRLE + #165, #92    ; '\' (ASCII 92)
+            static TitleRLE + #166, #3      ; count
+            static TitleRLE + #167, #95    ; '_' (ASCII 95)
+            static TitleRLE + #168, #1      ; count
+            static TitleRLE + #169, #124    ; '|' (ASCII 124)
+            static TitleRLE + #170, #1      ; count
+            static TitleRLE + #171, #95    ; '_' (ASCII 95)
+            static TitleRLE + #172, #1      ; count
+            static TitleRLE + #173, #124    ; '|' (ASCII 124)
+            static TitleRLE + #174, #16      ; count
+            static TitleRLE + #175, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #176, #1      ; count
+            static TitleRLE + #177, #124    ; '|' (ASCII 124)
+            static TitleRLE + #178, #1      ; count
+            static TitleRLE + #179, #95    ; '_' (ASCII 95)
+            static TitleRLE + #180, #1      ; count
+            static TitleRLE + #181, #124    ; '|' (ASCII 124)
+            static TitleRLE + #182, #9      ; count
+            static TitleRLE + #183, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #184, #1      ; count
+            static TitleRLE + #185, #124    ; '|' (ASCII 124)
+            static TitleRLE + #186, #3      ; count
+            static TitleRLE + #187, #95    ; '_' (ASCII 95)
+            static TitleRLE + #188, #1      ; count
+            static TitleRLE + #189, #47    ; '/' (ASCII 47)
+            static TitleRLE + #190, #893      ; count
+            static TitleRLE + #191, #32    ; ' ' (ASCII 32)
+            static TitleRLE + #192, #0      ; terminator	
 
 ; Level Data: Var #5  ;<HUD, Props, Background, Behavior, Topology>
 
@@ -1884,209 +2532,210 @@ LoadGameObjects: ; Must be inserted in LoadStage
 		static ZeroRLE + #1, #32    ; ' ' (ASCII 32)
 		static ZeroRLE + #2, #0     ; terminator
 
-	Level1: var #5
+	TestLevel: var #5
 
-		static Level1 + #0, #EmptyRLE    ; UI
-		static Level1 + #1, #Level1PropsRLE
-		static Level1 + #2, #TitleRLE ;Background
-		static Level1 + #3, #EmptyRLE ;Behaviour ; Will be infered from the Prop Layer and Background Layer in my game;
-		static Level1 + #4, #Level1Topology      ;Topology
+		static TestLevel + #0, #EmptyRLE    ; UI
+		static TestLevel + #1, #TestLevelPropsRLE
+		static TestLevel + #2, #TitleRLE ;Background
+		static TestLevel + #3, #EmptyRLE ;Behaviour ; Will be infered from the Prop Layer and Background Layer in my game;
+		static TestLevel + #4, #TestLevelTopology      ;Topology
 
 		; Original: 1200 words, RLE: 187 words, saved 84.4%
 		; RLE encoded level data
-		Level1PropsRLE : var #187  ; 93 runs, 187 words total
+		TestLevelPropsRLE : var #187  ; 93 runs, 187 words total
 
-			static Level1PropsRLE + #0, #28      ; count
-			static Level1PropsRLE + #1, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #2, #1      ; count
-			static Level1PropsRLE + #3, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #4, #39      ; count
-			static Level1PropsRLE + #5, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #6, #1      ; count
-			static Level1PropsRLE + #7, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #8, #39      ; count
-			static Level1PropsRLE + #9, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #10, #1      ; count
-			static Level1PropsRLE + #11, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #12, #39      ; count
-			static Level1PropsRLE + #13, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #14, #1      ; count
-			static Level1PropsRLE + #15, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #16, #39      ; count
-			static Level1PropsRLE + #17, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #18, #1      ; count
-			static Level1PropsRLE + #19, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #20, #39      ; count
-			static Level1PropsRLE + #21, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #22, #1      ; count
-			static Level1PropsRLE + #23, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #24, #39      ; count
-			static Level1PropsRLE + #25, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #26, #1      ; count
-			static Level1PropsRLE + #27, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #28, #39      ; count
-			static Level1PropsRLE + #29, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #30, #1      ; count
-			static Level1PropsRLE + #31, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #32, #39      ; count
-			static Level1PropsRLE + #33, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #34, #1      ; count
-			static Level1PropsRLE + #35, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #36, #25      ; count
-			static Level1PropsRLE + #37, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #38, #9      ; count
-			static Level1PropsRLE + #39, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #40, #5      ; count
-			static Level1PropsRLE + #41, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #42, #1      ; count
-			static Level1PropsRLE + #43, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #44, #25      ; count
-			static Level1PropsRLE + #45, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #46, #1      ; count
-			static Level1PropsRLE + #47, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #48, #7      ; count
-			static Level1PropsRLE + #49, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #50, #1      ; count
-			static Level1PropsRLE + #51, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #52, #5      ; count
-			static Level1PropsRLE + #53, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #54, #1      ; count
-			static Level1PropsRLE + #55, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #56, #25      ; count
-			static Level1PropsRLE + #57, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #58, #1      ; count
-			static Level1PropsRLE + #59, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #60, #7      ; count
-			static Level1PropsRLE + #61, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #62, #1      ; count
-			static Level1PropsRLE + #63, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #64, #5      ; count
-			static Level1PropsRLE + #65, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #66, #1      ; count
-			static Level1PropsRLE + #67, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #68, #25      ; count
-			static Level1PropsRLE + #69, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #70, #1      ; count
-			static Level1PropsRLE + #71, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #72, #7      ; count
-			static Level1PropsRLE + #73, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #74, #1      ; count
-			static Level1PropsRLE + #75, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #76, #5      ; count
-			static Level1PropsRLE + #77, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #78, #1      ; count
-			static Level1PropsRLE + #79, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #80, #25      ; count
-			static Level1PropsRLE + #81, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #82, #1      ; count
-			static Level1PropsRLE + #83, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #84, #7      ; count
-			static Level1PropsRLE + #85, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #86, #1      ; count
-			static Level1PropsRLE + #87, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #88, #5      ; count
-			static Level1PropsRLE + #89, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #90, #1      ; count
-			static Level1PropsRLE + #91, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #92, #25      ; count
-			static Level1PropsRLE + #93, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #94, #1      ; count
-			static Level1PropsRLE + #95, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #96, #7      ; count
-			static Level1PropsRLE + #97, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #98, #1      ; count
-			static Level1PropsRLE + #99, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #100, #5      ; count
-			static Level1PropsRLE + #101, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #102, #1      ; count
-			static Level1PropsRLE + #103, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #104, #25      ; count
-			static Level1PropsRLE + #105, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #106, #1      ; count
-			static Level1PropsRLE + #107, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #108, #7      ; count
-			static Level1PropsRLE + #109, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #110, #1      ; count
-			static Level1PropsRLE + #111, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #112, #5      ; count
-			static Level1PropsRLE + #113, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #114, #1      ; count
-			static Level1PropsRLE + #115, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #116, #25      ; count
-			static Level1PropsRLE + #117, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #118, #1      ; count
-			static Level1PropsRLE + #119, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #120, #7      ; count
-			static Level1PropsRLE + #121, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #122, #1      ; count
-			static Level1PropsRLE + #123, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #124, #5      ; count
-			static Level1PropsRLE + #125, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #126, #1      ; count
-			static Level1PropsRLE + #127, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #128, #25      ; count
-			static Level1PropsRLE + #129, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #130, #9      ; count
-			static Level1PropsRLE + #131, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #132, #5      ; count
-			static Level1PropsRLE + #133, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #134, #1      ; count
-			static Level1PropsRLE + #135, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #136, #39      ; count
-			static Level1PropsRLE + #137, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #138, #1      ; count
-			static Level1PropsRLE + #139, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #140, #39      ; count
-			static Level1PropsRLE + #141, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #142, #1      ; count
-			static Level1PropsRLE + #143, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #144, #39      ; count
-			static Level1PropsRLE + #145, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #146, #1      ; count
-			static Level1PropsRLE + #147, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #148, #39      ; count
-			static Level1PropsRLE + #149, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #150, #1      ; count
-			static Level1PropsRLE + #151, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #152, #39      ; count
-			static Level1PropsRLE + #153, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #154, #1      ; count
-			static Level1PropsRLE + #155, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #156, #25      ; count
-			static Level1PropsRLE + #157, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #158, #15      ; count
-			static Level1PropsRLE + #159, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #160, #39      ; count
-			static Level1PropsRLE + #161, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #162, #1      ; count
-			static Level1PropsRLE + #163, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #164, #39      ; count
-			static Level1PropsRLE + #165, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #166, #1      ; count
-			static Level1PropsRLE + #167, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #168, #39      ; count
-			static Level1PropsRLE + #169, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #170, #1      ; count
-			static Level1PropsRLE + #171, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #172, #39      ; count
-			static Level1PropsRLE + #173, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #174, #1      ; count
-			static Level1PropsRLE + #175, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #176, #39      ; count
-			static Level1PropsRLE + #177, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #178, #1      ; count
-			static Level1PropsRLE + #179, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #180, #39      ; count
-			static Level1PropsRLE + #181, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #182, #1      ; count
-			static Level1PropsRLE + #183, #64    ; '@' (ASCII 64)
-			static Level1PropsRLE + #184, #11      ; count
-			static Level1PropsRLE + #185, #32    ; ' ' (ASCII 32)
-			static Level1PropsRLE + #186, #0      ; terminator
+			static TestLevelPropsRLE + #0, #28      ; count
+			static TestLevelPropsRLE + #1, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #2, #1      ; count
+			static TestLevelPropsRLE + #3, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #4, #39      ; count
+			static TestLevelPropsRLE + #5, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #6, #1      ; count
+			static TestLevelPropsRLE + #7, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #8, #39      ; count
+			static TestLevelPropsRLE + #9, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #10, #1      ; count
+			static TestLevelPropsRLE + #11, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #12, #39      ; count
+			static TestLevelPropsRLE + #13, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #14, #1      ; count
+			static TestLevelPropsRLE + #15, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #16, #39      ; count
+			static TestLevelPropsRLE + #17, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #18, #1      ; count
+			static TestLevelPropsRLE + #19, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #20, #39      ; count
+			static TestLevelPropsRLE + #21, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #22, #1      ; count
+			static TestLevelPropsRLE + #23, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #24, #39      ; count
+			static TestLevelPropsRLE + #25, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #26, #1      ; count
+			static TestLevelPropsRLE + #27, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #28, #39      ; count
+			static TestLevelPropsRLE + #29, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #30, #1      ; count
+			static TestLevelPropsRLE + #31, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #32, #39      ; count
+			static TestLevelPropsRLE + #33, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #34, #1      ; count
+			static TestLevelPropsRLE + #35, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #36, #25      ; count
+			static TestLevelPropsRLE + #37, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #38, #9      ; count
+			static TestLevelPropsRLE + #39, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #40, #5      ; count
+			static TestLevelPropsRLE + #41, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #42, #1      ; count
+			static TestLevelPropsRLE + #43, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #44, #25      ; count
+			static TestLevelPropsRLE + #45, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #46, #1      ; count
+			static TestLevelPropsRLE + #47, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #48, #7      ; count
+			static TestLevelPropsRLE + #49, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #50, #1      ; count
+			static TestLevelPropsRLE + #51, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #52, #5      ; count
+			static TestLevelPropsRLE + #53, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #54, #1      ; count
+			static TestLevelPropsRLE + #55, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #56, #25      ; count
+			static TestLevelPropsRLE + #57, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #58, #1      ; count
+			static TestLevelPropsRLE + #59, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #60, #7      ; count
+			static TestLevelPropsRLE + #61, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #62, #1      ; count
+			static TestLevelPropsRLE + #63, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #64, #5      ; count
+			static TestLevelPropsRLE + #65, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #66, #1      ; count
+			static TestLevelPropsRLE + #67, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #68, #25      ; count
+			static TestLevelPropsRLE + #69, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #70, #1      ; count
+			static TestLevelPropsRLE + #71, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #72, #7      ; count
+			static TestLevelPropsRLE + #73, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #74, #1      ; count
+			static TestLevelPropsRLE + #75, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #76, #5      ; count
+			static TestLevelPropsRLE + #77, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #78, #1      ; count
+			static TestLevelPropsRLE + #79, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #80, #25      ; count
+			static TestLevelPropsRLE + #81, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #82, #1      ; count
+			static TestLevelPropsRLE + #83, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #84, #7      ; count
+			static TestLevelPropsRLE + #85, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #86, #1      ; count
+			static TestLevelPropsRLE + #87, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #88, #5      ; count
+			static TestLevelPropsRLE + #89, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #90, #1      ; count
+			static TestLevelPropsRLE + #91, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #92, #25      ; count
+			static TestLevelPropsRLE + #93, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #94, #1      ; count
+			static TestLevelPropsRLE + #95, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #96, #7      ; count
+			static TestLevelPropsRLE + #97, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #98, #1      ; count
+			static TestLevelPropsRLE + #99, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #100, #5      ; count
+			static TestLevelPropsRLE + #101, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #102, #1      ; count
+			static TestLevelPropsRLE + #103, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #104, #25      ; count
+			static TestLevelPropsRLE + #105, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #106, #1      ; count
+			static TestLevelPropsRLE + #107, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #108, #7      ; count
+			static TestLevelPropsRLE + #109, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #110, #1      ; count
+			static TestLevelPropsRLE + #111, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #112, #5      ; count
+			static TestLevelPropsRLE + #113, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #114, #1      ; count
+			static TestLevelPropsRLE + #115, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #116, #25      ; count
+			static TestLevelPropsRLE + #117, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #118, #1      ; count
+			static TestLevelPropsRLE + #119, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #120, #7      ; count
+			static TestLevelPropsRLE + #121, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #122, #1      ; count
+			static TestLevelPropsRLE + #123, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #124, #5      ; count
+			static TestLevelPropsRLE + #125, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #126, #1      ; count
+			static TestLevelPropsRLE + #127, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #128, #25      ; count
+			static TestLevelPropsRLE + #129, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #130, #9      ; count
+			static TestLevelPropsRLE + #131, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #132, #5      ; count
+			static TestLevelPropsRLE + #133, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #134, #1      ; count
+			static TestLevelPropsRLE + #135, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #136, #39      ; count
+			static TestLevelPropsRLE + #137, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #138, #1      ; count
+			static TestLevelPropsRLE + #139, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #140, #39      ; count
+			static TestLevelPropsRLE + #141, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #142, #1      ; count
+			static TestLevelPropsRLE + #143, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #144, #39      ; count
+			static TestLevelPropsRLE + #145, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #146, #1      ; count
+			static TestLevelPropsRLE + #147, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #148, #39      ; count
+			static TestLevelPropsRLE + #149, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #150, #1      ; count
+			static TestLevelPropsRLE + #151, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #152, #39      ; count
+			static TestLevelPropsRLE + #153, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #154, #1      ; count
+			static TestLevelPropsRLE + #155, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #156, #25      ; count
+			static TestLevelPropsRLE + #157, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #158, #15      ; count
+			static TestLevelPropsRLE + #159, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #160, #39      ; count
+			static TestLevelPropsRLE + #161, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #162, #1      ; count
+			static TestLevelPropsRLE + #163, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #164, #39      ; count
+			static TestLevelPropsRLE + #165, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #166, #1      ; count
+			static TestLevelPropsRLE + #167, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #168, #39      ; count
+			static TestLevelPropsRLE + #169, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #170, #1      ; count
+			static TestLevelPropsRLE + #171, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #172, #39      ; count
+			static TestLevelPropsRLE + #173, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #174, #1      ; count
+			static TestLevelPropsRLE + #175, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #176, #39      ; count
+			static TestLevelPropsRLE + #177, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #178, #1      ; count
+			static TestLevelPropsRLE + #179, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #180, #39      ; count
+			static TestLevelPropsRLE + #181, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #182, #1      ; count
+			static TestLevelPropsRLE + #183, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #184, #11      ; count
+			static TestLevelPropsRLE + #185, #32    ; ' ' (ASCII 32)
+			static TestLevelPropsRLE + #186, #0      ; terminator
 
-		Level1Topology: var #1
+		TestLevelTopology: var #1
+
+	Level1: var #5
 
 	Level2: var #5
-
 
 ;
