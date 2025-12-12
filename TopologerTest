@@ -105,28 +105,12 @@ main:
 			loadn r0, #UIStack
 			store UIStackPointer, r0
 
-		; Load Level 1
-			loadn r2, #TestLevel
-			call LoadStage ; (r1)
+		; call MainMenu
 
-		; positions player in level
+			loadn r2, #MainMenu
+			call UICall
 
-			loadn r1, #currentPropLayer
-			loadi r1, r1
-
-			loadn r0, #80
-			store playerPos, r0
-	
-			add r2, r1, r0
-			loadn r0, #'A'
-
-			storei r2, r0
-
-
-		; first Print
-
-			call FullScreenPrint
-
+			call FullScreenUIPrint
 
 	mainLoop:
 
@@ -332,23 +316,27 @@ movePlayer:
 	rts
 
 CheckWin:
+    push r0
+    push r1
+    push r2
 
-	push r0
-	push r1
+    load r0, currentPropLayer
+    load r1, playerPos
+    add r0, r0, r1  ; Get address of player position in prop layer
+    loadi r0, r0    ; Load the CHARACTER at that position
+    
+    loadn r2, #'P'  ; Goal character
+    cmp r0, r2
+    jne CheckWin_PlayerNotOnGoal
 
-	load r0, playerPos
-	loadn r1, #'P'
-	cmp r0, r1
-	jne CheckWin_PlayerNotOnGoal
+        call NextLevel
 
-		call NextLevel
+    CheckWin_PlayerNotOnGoal:
 
-		CheckWin_PlayerNotOnGoal:
-
-	pop r1
-	pop r0
-
-	rts
+    pop r2
+    pop r1
+    pop r0
+    rts
 
 NextLevel:
 
@@ -1361,6 +1349,8 @@ UICall: 	; <UI element>  Pushes element in stack, Calls: UIDrawToBuffer, SquareF
 
 				loadn r3, #0
 				call SquareFinder  ; Updates currentScreenIndexesChanged
+
+				call FullScreenUIPrint
 
 			; Pushing the element into the stack
 
@@ -2398,7 +2388,31 @@ LoadGameObjects: ; Must be inserted in LoadStage
 					static MainMenuInteractibleElementONE + #2, #MainMenuInteractibleElementONE_Function ; FUNCTION
 
 					MainMenuInteractibleElementONE_Function:
+
 						call UIClose
+
+						; Load Level 1
+							loadn r2, #TestLevel
+							call LoadStage ; (r1)
+
+						; positions player in level
+
+							loadn r1, #currentPropLayer
+							loadi r1, r1
+
+							loadn r0, #80
+							store playerPos, r0
+					
+							add r2, r1, r0
+							loadn r0, #'A'
+
+							storei r2, r0
+
+
+						; first Print
+
+							call FullScreenPrint
+
 						rts
 
 				MainMenuInteractibleElementTWO: var #3
@@ -2416,10 +2430,6 @@ LoadGameObjects: ; Must be inserted in LoadStage
 						call UIClose
 
 						rts
-
-
-
-
 
 
 
