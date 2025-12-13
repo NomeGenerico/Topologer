@@ -1,5 +1,15 @@
 jmp main
 
+; Reserved For future Object functions Declarations,  Objects will have a sprite 7 bits (0-127), and a function 8 bits(0-255) (127 Functions) ; Label:
+																																			  ; jmp ActualFunction    // jump takes two words in memory 
+
+
+; TODO
+; TODO    Falling dust background for title
+; TODO    Using memory more efficient USE Bit Operations
+; TODO
+
+
 ; MiscDeclarations
 
 
@@ -64,6 +74,29 @@ jmp main
 	uIHighlightColor: var #1
 	static uIHighlightColor, #64512
 
+	LevelList: var #4 
+	static LevelList, #Level1
+	static LevelList + #1,  #Level2
+
+	CurrentLevel: var #1
+	static CurrentLevel, #0
+
+	NumLevels: var#1
+	static NumLevels, #2
+
+
+	RLETraverserBuffer: var #40           ;  [index, shift]
+	CurrentRLETraverserBufferPosition: var #1
+	static CurrentRLETraverserBufferPosition , #RLETraverserBuffer
+
+	BehaviorJumpDict: var #128
+
+	; defining the functions
+
+		static BehaviorJumpDict  + #35 , #BlockMovement
+		static BehaviorJumpDict  + #64 , #checkPushMovement
+
+
 main:
 
 	;SetUp
@@ -94,10 +127,6 @@ main:
 			loadn r0, #UIStack
 			store UIStackPointer, r0
 
-		; Load Level 1
-			loadn r2, #TestLevel
-			call LoadStage ; (r1)
-
 		; positions player in level
 
 			loadn r1, #currentPropLayer
@@ -111,10 +140,14 @@ main:
 
 			storei r2, r0
 
+		; call MainMenu
 
-		; first Print
+			loadn r0, #MainMenu
+			call UICall
 
-			call FullScreenPrint
+			;call FullScreenUIPrint
+
+			;call FullScreenPrint
 
 	mainLoop:
 
@@ -126,9 +159,10 @@ main:
 		;GameUpdate
 
 			call movePlayer  ;TODO: put checkPushMovement in a BehaviourLayer; and check if UI is active or not. 
-			; Behavior ; TODO
 
-			; Ticks all entities that must be ticked in every "frame"
+
+			;call CheckWin
+
 
 			call UIHandeler
 			
@@ -318,6 +352,65 @@ movePlayer:
 
 	rts
 
+CheckWin:
+    push r0
+    push r1
+    push r2
+
+    load r0, currentPropLayer
+    load r1, playerPos
+    add r0, r0, r1  ; Get address of player position in prop layer
+    loadi r0, r0    ; Load the CHARACTER at that position
+    
+    loadn r2, #'P'  ; Goal character
+    cmp r0, r2
+    jne CheckWin_PlayerNotOnGoal
+
+        call NextLevel
+
+    CheckWin_PlayerNotOnGoal:
+
+    pop r2
+    pop r1
+    pop r0
+    rts
+
+NextLevel:
+
+	push r1
+	push r2
+	push r3
+
+	load r2, #LevelList
+	load r1, CurrentLevel
+
+	inc r1
+	load r3, NumLevels
+	cmp r1, r3
+	jne NextLevel_DidNotFinishGame
+
+		pop r3
+		pop r2
+		pop r1
+
+		jmp main
+
+		NextLevel_DidNotFinishGame:
+
+
+	store CurrentLevel, r1
+
+	add r2, r2, r1
+	loadi r2, r2
+
+	call LoadStage  ; takes r2
+
+	pop r3
+	pop r2
+	pop r1
+
+	rts
+
 MoveInMemory:
 
 	;Takes r0 and r1 as inputs for positions; 
@@ -354,154 +447,6 @@ MoveInMemory:
 	pop r3
 	pop r2
 
-	rts
-	
-checkPushMovement:
-	
-	push r0 ;stores callers pos
-	push r1 ;stores callers prevpos
-	push r2
-	push r3
-	push r5
-	push r4
-	push r6
-
-
-	;r0, new position
-	;r1, previous position
-
-
-	; if new position has box, push box
-	
-	load r6, currentPropLayer
-	add r2, r6, r0 ; memory addres of r0 position in propLayer
-
-	loadi r4, r2
-	loadn r3, #'@'
-	cmp r4, r3
-
-	jne endboxmv
-
-		sub r2, r0, r1 ; playerMoveDirection ; can be infered from r0 and r1
-		; r2 will become a movent direction
-	
-		;if r2 = 3 (Left: -1 = 65535)
-			loadn r3, #65535
-			cmp r3, r2
-			jeq boxMvLeft
-	
-		;if r2 = 1 (Right: +1)
-			loadn r3, #1 
-			cmp r3, r2
-			jeq boxMvRight
-
-		;if r2 = 2 (Up: -40 = 65496)
-			loadn r3, #65496	
-			cmp r3, r2
-			jeq boxMvUp
-
-		;if r2 = 4 (Down: +40)
-			loadn r3, #40
-			cmp r3, r2
-			jeq boxMvDown
-		
-		; code will reach here if the boxes cross the topology bounderies
-
-		; torus specific fix; will need to be moved to a function with a pointer in 
-		; current topology manager or solver
-			
-			loadn r3, #65497
-			cmp r3, r2
-			jeq boxMvRight
-
-			loadn r3, #64376
-			cmp r3, r2
-			jeq boxMvDown
-
-			loadn r3, #39
-			cmp r3, r2
-			jeq boxMvLeft
-
-			loadn r3, #1160
-			cmp r3, r2
-			jeq boxMvUp
-
-
-		jmp endboxmv		
-
-		boxMvRight:
-			mov r5, r0
-			call MvRight ; puts new position in r0
-			jmp boxmvtopology	
-
-		boxMvUp:
-			mov r5, r0
-			call MvUp ; puts new position in r0
-			jmp boxmvtopology
-
-		boxMvLeft:
-			mov r5, r0
-			call MvLeft ; puts new position in r0
-			jmp boxmvtopology
-
-		boxMvDown:
-			mov r5, r0
-			call MvDown ; puts new position in r0
-			jmp boxmvtopology
-
-
-		boxmvtopology:
-			mov r1, r5
-			call mvTopology ; puts new position in r0
-
-		;r0, is the new position of the box, we must check if it is valid
-		;r1 is the previous position of the box
-
-		; if new position has Wall
-	
-		load r6, currentPropLayer
-		add r2, r6, r0 ; memory addres of r0 position in propLayer
-
-		loadi r4, r2
-		loadn r3, #'#'
-		cmp r4, r3
-		jne checkPushMovement_continue
-
-			loadn r3, #1
-			;store moveBlocked, r3 ; <--- Você pode querer armazenar moveBlocked aqui
-
-			jmp checkPushMovement_handleRecursion
-
-		checkPushMovement_continue:
-
-			call checkPushMovement
-		
-		checkPushMovement_handleRecursion: 
-		
-		;if valid
-		load r3, moveBlocked
-		loadn r4, #1
-		cmp r3, r4
-		;jeq checkPushMovement_skipMove:
-
-			;MoveInMemory
-			call MoveInMemory
-		
-			call SetIndexChanged
-
-			checkPushMovement_skipMove:
-
-	endboxmv:
-	
-
-	
-	pop r6
-	pop r5
-	pop r4
-	pop r3
-	pop r2
-	pop r1
-	pop r0
 	rts
 
 MvRight:
@@ -1126,9 +1071,128 @@ RLEEncoder:
 
 	rts
 
-RLETraverser:   ; TODO
+RLETraverser:   <target index, index in UI stack>
 				; needs to traverse the rle string looking for a single char eficiently if called multiple times in sequence
+	
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r6
+	push r7
 
+	; r0 is the target index
+	; r1 is the target RLE   [index In Ui stack] 
+
+	mov r3, r1
+	;mov r7, r1
+
+	; load r1, RLE
+		loadn r2, #UIStack
+		add r1, r2, r1
+		loadi r1, r1    ; UIobject
+		loadn r2, #4	
+		add r1, r2, r1
+		loadi r1, r1    ; RLE
+
+	; Gets Buffered Data
+		add r2, r3, r3   ; r0 * 2 = index in RLETraverserBuffer
+		loadn r3, #RLETraverserBuffer
+		add r3, r3, r2     ; Buffered Data for UI in index of the UIStack
+
+		mov r5, r3
+
+		loadi r2, r3       ; Index in screen of the buffered data
+		inc r3
+		loadi r3, r3       ; How many counts were traversed
+		dec r3
+
+	; r0 = target index, r1 = RLE, r2 = buffered index, r3 = shift in RLE
+
+	; Check which strategy to use. Increasing or Decreasing
+
+		cmp r0, r2
+		jeg RLETraverser_Increasing    ; r0 >= r2
+
+		jmp RLETraverser_Decreasing    ; r0 < r2
+
+	RLETraverser_Increasing:
+
+		mov r4, r2
+
+		RLETraverser_Increasing_Loop:
+
+			mov r2, r4      ; new buffered
+			inc r3 ; char
+			mov r6, r3
+			inc r3 ; count
+			add r4, r1, r3
+			loadi r4, r4   ; Count of the next char
+			add r4, r4, r2 ; Index of the next char
+
+			cmp r0, r4
+			jeg RLETraverser_Increasing_Loop    
+				; r2 < r0 < r4   -> get char from r6
+
+				; buffer new data
+					storei r5, r2
+					loadn r7, #2
+					div r3, r3, r7
+					inc r5
+					storei r5, r3
+
+				; get char
+					add r1, r1, r6
+					loadi r0, r1
+					; r0 = char
+
+		jmp RLETraverser_Continue
+
+	RLETraverser_Decreasing:
+
+		mov r4, r2
+
+		RLETraverser_Decreasing_Loop:
+
+			mov r2, r4      ; new buffered
+			dec r3 ; char
+			mov r6, r3
+			dec r3 ; count
+			add r4, r1, r3
+			loadi r4, r4   ; Count of the next object
+			sub r4, r4, r2 ; count of the next char
+
+			cmp r0, r4
+			jle RLETraverser_Decreasing_Loop    
+				; r2 > r0 > r4   -> get char from r6
+
+				; buffer new data
+					storei r5, r2
+					loadn r7, #2
+					div r3, r3, r7
+					inc r5
+					storei r5, r3
+
+				; get char
+					add r1, r1, r6
+					loadi r0, r1
+					; r0 = char
+
+		jmp RLETraverser_Continue
+
+
+	RLETraverser_Continue:
+
+
+	pop r7
+	pop r6
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	; r0 = char in target index of the decoded RLE
 
 	rts
 
@@ -1293,6 +1357,8 @@ UICall: 	; <UI element>  Pushes element in stack, Calls: UIDrawToBuffer, SquareF
 
 				loadn r3, #0
 				call SquareFinder  ; Updates currentScreenIndexesChanged
+
+				call FullScreenUIPrint
 
 			; Pushing the element into the stack
 
@@ -1701,6 +1767,186 @@ UIRedraw:   ; <> Rebuilds UI Buffer from the stack
 ; 
 LoadGameObjects: ; Must be inserted in LoadStage
 
+	CallBehaviorIndex:    ; calls from the prop layer once
+
+
+		rts
+
+
+	CallBehaviorBackground:   ;  Ticks all behaviors of Background in level
+
+
+		rts
+
+	; Background Functions
+
+		; Goal
+
+		; Conveyour Belt
+
+	; Prop Functions 
+
+		; Wall
+
+			BlockMovement: 
+				push r0
+				loadn r0, #1
+				store moveBlocked, r0
+				pop r0
+				rts
+
+		; Box
+
+			checkPushMovement:
+		
+				push r0 ;stores callers pos
+				push r1 ;stores callers prevpos
+				push r2
+				push r3
+				push r5
+				push r4
+				push r6
+
+
+				;r0, new position
+				;r1, previous position
+
+
+				; if new position has box, push box
+				
+				load r6, currentPropLayer
+				add r2, r6, r0 ; memory addres of r0 position in propLayer
+
+				loadi r4, r2
+				loadn r3, #'@'
+				cmp r4, r3
+
+				jne endboxmv
+
+					sub r2, r0, r1 ; playerMoveDirection ; can be infered from r0 and r1
+					; r2 will become a movent direction
+				
+					;if r2 = 3 (Left: -1 = 65535)
+						loadn r3, #65535
+						cmp r3, r2
+						jeq boxMvLeft
+				
+					;if r2 = 1 (Right: +1)
+						loadn r3, #1 
+						cmp r3, r2
+						jeq boxMvRight
+
+					;if r2 = 2 (Up: -40 = 65496)
+						loadn r3, #65496	
+						cmp r3, r2
+						jeq boxMvUp
+
+					;if r2 = 4 (Down: +40)
+						loadn r3, #40
+						cmp r3, r2
+						jeq boxMvDown
+					
+					; code will reach here if the boxes cross the topology bounderies
+
+					; torus specific fix; will need to be moved to a function with a pointer in 
+					; current topology manager or solver
+						
+						loadn r3, #65497
+						cmp r3, r2
+						jeq boxMvRight
+
+						loadn r3, #64376
+						cmp r3, r2
+						jeq boxMvDown
+
+						loadn r3, #39
+						cmp r3, r2
+						jeq boxMvLeft
+
+						loadn r3, #1160
+						cmp r3, r2
+						jeq boxMvUp
+
+
+					jmp endboxmv		
+
+					boxMvRight:
+						mov r5, r0
+						call MvRight ; puts new position in r0
+						jmp boxmvtopology	
+
+					boxMvUp:
+						mov r5, r0
+						call MvUp ; puts new position in r0
+						jmp boxmvtopology
+
+					boxMvLeft:
+						mov r5, r0
+						call MvLeft ; puts new position in r0
+						jmp boxmvtopology
+
+					boxMvDown:
+						mov r5, r0
+						call MvDown ; puts new position in r0
+						jmp boxmvtopology
+
+
+					boxmvtopology:
+						mov r1, r5
+						call mvTopology ; puts new position in r0
+
+					;r0, is the new position of the box, we must check if it is valid
+					;r1 is the previous position of the box
+
+					; if new position has Wall
+				
+					load r6, currentPropLayer
+					add r2, r6, r0 ; memory addres of r0 position in propLayer
+
+					loadi r4, r2
+					loadn r3, #'#'
+					cmp r4, r3
+					jne checkPushMovement_continue
+
+						loadn r3, #1
+						store moveBlocked, r3 ; <--- Você pode querer armazenar moveBlocked aqui
+
+						jmp checkPushMovement_handleRecursion
+
+					checkPushMovement_continue:
+
+						call checkPushMovement
+					
+					checkPushMovement_handleRecursion: 
+					
+					;if valid
+					load r3, moveBlocked
+					loadn r4, #1
+					cmp r3, r4
+					jeq checkPushMovement_skipMove
+
+						;MoveInMemory
+						call MoveInMemory
+					
+						call SetIndexChanged
+
+						checkPushMovement_skipMove:
+
+				endboxmv:
+				
+
+				
+				pop r6
+				pop r5
+				pop r4
+				pop r3
+				pop r2
+				pop r1
+				pop r0
+				rts
+
+ChechkBehavior:
+
 ; DATA TYPES
 ;____________________________________
 
@@ -1725,8 +1971,8 @@ LoadGameObjects: ; Must be inserted in LoadStage
 	UIConfirmationPrompt: var #7
 
 		static UIConfirmationPrompt + #0,  #UIConfirmationPromptFunction
-		static UIConfirmationPrompt + #1, #574
-		static UIConfirmationPrompt + #2, #667
+		static UIConfirmationPrompt + #1, #573
+		static UIConfirmationPrompt + #2, #666
 		static UIConfirmationPrompt + #3, #0 ; white
 		static UIConfirmationPrompt + #4, #ConfirmationPromptRLE
         static UIConfirmationPrompt + #5, #2
@@ -1880,13 +2126,13 @@ LoadGameObjects: ; Must be inserted in LoadStage
 
         UIConfirmationPromptInteractibleElementsList: var #2
 		
-			; InteractibleElement <ID, Start, End, Function>
+			; InteractibleElement <Start, End, Function>
 			static UIConfirmationPromptInteractibleElementsList + #0, #UIConfirmationPromptInteractibleElementONE
 			static UIConfirmationPromptInteractibleElementsList + #1, #UIConfirmationPromptInteractibleElementTWO
 
 				UIConfirmationPromptInteractibleElementONE: var #3
-					static UIConfirmationPromptInteractibleElementONE + #0, #617
-					static UIConfirmationPromptInteractibleElementONE + #1, #618
+					static UIConfirmationPromptInteractibleElementONE + #0, #616
+					static UIConfirmationPromptInteractibleElementONE + #1, #617
 					static UIConfirmationPromptInteractibleElementONE + #2, #UIConfirmationPromptInteractibleElementONE_Function ; FUNCTION
 
 					UIConfirmationPromptInteractibleElementONE_Function:
@@ -1894,8 +2140,8 @@ LoadGameObjects: ; Must be inserted in LoadStage
 						rts
 
 				UIConfirmationPromptInteractibleElementTWO: var #3
-					static UIConfirmationPromptInteractibleElementTWO + #0, #621
-					static UIConfirmationPromptInteractibleElementTWO + #1, #624
+					static UIConfirmationPromptInteractibleElementTWO + #0, #620
+					static UIConfirmationPromptInteractibleElementTWO + #1, #623
 					static UIConfirmationPromptInteractibleElementTWO + #2, #UIConfirmationPromptInteractibleElementTWO_Function ; FUNCTION
 
 					UIConfirmationPromptInteractibleElementTWO_Function:
@@ -1909,14 +2155,13 @@ LoadGameObjects: ; Must be inserted in LoadStage
 
 						rts
 
-
     ;MainMenu
 
 		MainMenu: var #7
 
-			static MainMenu + #0,  #MainMenuFunction
-			static MainMenu + #1, #0
-			static MainMenu + #2, #1999
+			static MainMenu + #0, #MainMenuFunction
+			static MainMenu + #1, #0 ;#81
+			static MainMenu + #2, #1199 ;#707
 			static MainMenu + #3, #0 ; white
 			static MainMenu + #4, #MainMenuRLE
 			static MainMenu + #5, #2
@@ -1945,20 +2190,15 @@ LoadGameObjects: ; Must be inserted in LoadStage
 						pop r2
 						pop r1
 
-					;if a
-						loadn r1, #'a'  
+					;if w
+						loadn r1, #'w'  
 						cmp r0, r1
-						jeq MainMenuFunction_Ifa
+						jeq MainMenuFunction_Ifw
 
 					;if d
-						loadn r1, #'d'  
+						loadn r1, #'s'  
 						cmp r0, r1
-						jeq MainMenuFunction_Ifd
-
-					;if esc:
-						loadn r1, #27 ; ESC
-						cmp r0, r1
-						jeq MainMenuFunction_IfESC
+						jeq MainMenuFunction_Ifs
 
 					;if enter
 						loadn r1, #13 ; Enter
@@ -1968,7 +2208,7 @@ LoadGameObjects: ; Must be inserted in LoadStage
 					;else:
 						jmp MainMenu_Continue
 
-					MainMenuFunction_Ifa:		
+					MainMenuFunction_Ifw:		
 
 						loadn r1, #1
 						store UICurentlySelectedElementChanged, r1
@@ -1976,7 +2216,7 @@ LoadGameObjects: ; Must be inserted in LoadStage
 						loadn r0, #65535 ; -1 shift
 						jmp MainMenuFunction_ResolveActive
 									
-					MainMenuFunction_Ifd:
+					MainMenuFunction_Ifs:
 
 						loadn r1, #1
 						store UICurentlySelectedElementChanged, r1
@@ -1984,10 +2224,6 @@ LoadGameObjects: ; Must be inserted in LoadStage
 						loadn r0, #1 ; shift
 						jmp MainMenuFunction_ResolveActive
 
-					MainMenuFunction_IfESC:
-
-						call UIClose
-						jmp MainMenu_Exit
 
 					MainMenuFunction_Ifenter:
 
@@ -2026,7 +2262,6 @@ LoadGameObjects: ; Must be inserted in LoadStage
 				pop r1
 				pop r0
 				rts
-
 
 			MainMenuRLE : var #285  ; 142 runs, 285 words total
 
@@ -2319,10 +2554,60 @@ LoadGameObjects: ; Must be inserted in LoadStage
 				static MainMenuRLE + #283, #32    ; ' ' (ASCII 32)
 				static MainMenuRLE + #284, #0      ; terminator
 
-			MainMenuInteractibleElementsList:
+			MainMenuInteractibleElementsList: var #2
+		
+				; InteractibleElement <Start, End, Function>
+				static MainMenuInteractibleElementsList + #0, #MainMenuInteractibleElementONE
+				static MainMenuInteractibleElementsList + #1, #MainMenuInteractibleElementTWO
+
+				MainMenuInteractibleElementONE: var #3
+					static MainMenuInteractibleElementONE + #0, #535
+					static MainMenuInteractibleElementONE + #1, #545
+					static MainMenuInteractibleElementONE + #2, #MainMenuInteractibleElementONE_Function ; FUNCTION
+
+					MainMenuInteractibleElementONE_Function:
+
+						call UIClose
+
+						; Load Level 1
+							loadn r2, #TestLevel
+							call LoadStage ; (r1)
+
+						; positions player in level
+
+							loadn r1, #currentPropLayer
+							loadi r1, r1
+
+							loadn r0, #80
+							store playerPos, r0
+					
+							add r2, r1, r0
+							loadn r0, #'A'
+
+							storei r2, r0
 
 
+						; first Print
 
+							call FullScreenPrint
+
+						rts
+
+				MainMenuInteractibleElementTWO: var #3
+					static MainMenuInteractibleElementTWO + #0, #614
+					static MainMenuInteractibleElementTWO + #1, #626
+					static MainMenuInteractibleElementTWO + #2, #MainMenuInteractibleElementTWO_Function ; FUNCTION
+
+					MainMenuInteractibleElementTWO_Function:
+
+						push r0
+						loadn r0, #1
+						store UISignal, r0
+						pop r0
+
+						call UIClose
+
+						rts
 
         TitleRLE : var #193  ; 96 runs, 193 words total
 
@@ -2583,7 +2868,7 @@ LoadGameObjects: ; Must be inserted in LoadStage
 			static TestLevelPropsRLE + #36, #25      ; count
 			static TestLevelPropsRLE + #37, #32    ; ' ' (ASCII 32)
 			static TestLevelPropsRLE + #38, #9      ; count
-			static TestLevelPropsRLE + #39, #64    ; '@' (ASCII 64)
+			static TestLevelPropsRLE + #39, #35    ; '#' (ASCII 64)
 			static TestLevelPropsRLE + #40, #5      ; count
 			static TestLevelPropsRLE + #41, #32    ; ' ' (ASCII 32)
 			static TestLevelPropsRLE + #42, #1      ; count
