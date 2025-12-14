@@ -24,10 +24,10 @@ The game follows a modular architecture with several independent systems that co
                │
      ┌─────────┴─────────────────────────────┐
      │                                       │
-┌────▼─────┐  ┌──────────┐  ┌───────────┐  ┌▼────────┐
-│  Input   │  │ Movement │  │ Behavior  │  │   UI    │
-│ Handler  │→ │  System  │→ │  System   │  │ System  │
-└──────────┘  └────┬─────┘  └─────┬─────┘  └─────────┘
+┌────▼─────┐  ┌──────────┐  ┌───────────┐   ┌▼────────┐
+│  Input   │  │ Movement │  │ Behavior  │   │   UI    │
+│ Handler  │→ │  System  │→ │  System   │   │ System  │
+└──────────┘  └────┬─────┘  └─────┬─────┘   └─────────┘
                    │              │
               ┌────▼──────────────▼────┐
               │  Topology System       │
