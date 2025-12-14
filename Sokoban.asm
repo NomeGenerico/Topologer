@@ -158,7 +158,7 @@ main:
 
 		; TODO: move delay logic outside input
 	
-		Delay
+		; call Delay
 
 		;GameUpdate
 
