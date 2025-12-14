@@ -93,6 +93,8 @@ jmp main
 
 	; defining the functions
 
+		static BehaviorJumpDict  + #0  , #DoNothing
+		static BehaviorJumpDict  + #32 , #DoNothing
 		static BehaviorJumpDict  + #35 , #BlockMovement
 		static BehaviorJumpDict  + #64 , #checkPushMovement
 
@@ -156,7 +158,11 @@ main:
 
 		; TODO: move delay logic outside input
 	
+		Delay
+
 		;GameUpdate
+
+
 
 			call movePlayer  ;TODO: put checkPushMovement in a BehaviourLayer; and check if UI is active or not. 
 
@@ -242,14 +248,12 @@ movePlayer:
 		load r0, ISUIActive
 		loadn r1, #1
 		cmp r0, r1
-		jeq MovePlayerUiSlip
+		jeq MovePlayerUiSkip
 
 	; reset moveBlocked
 
 		loadn r0, #0
-		store moveBlocked,
-
-
+		store moveBlocked, r0
 
 	load r0, playerPos
 	store playerOriginalPos, r0
@@ -327,24 +331,56 @@ movePlayer:
 		call mvTopology
 
 	; CheckPush or block
+
 		;takes r0 = new pos
 		load r1, playerPrevPos; takes r1 = prev pos
-		call checkPushMovement	
+		
 
 
-	endMovePlayer:
-	store playerPos, r0 
+		; Get character at player's new position
+		loadn r3, #LayerProps
+		add r3, r3, r0
+		loadi r3, r3       ; r3 = character at position
+
+		; Look up behavior function
+		loadn r2, #BehaviorJumpDict
+		add r2, r2, r3     ; r2 = address of function pointer
+		loadi r2, r2       ; r2 = function address
+
+		; Call through IndirectCall
+		push r0            ; Save position
+		push r1            ; Save prev position
+		mov r7, r2
+		call IndirectCall
+		pop r1
+		pop r0
+
+
+
+		
+		;call checkPushMovement	
+
+
+	; check move blocked
+	load r3, moveBlocked
+	loadn r2, #1
+	cmp r3, r2
+	jeq MovePlayer_moveBlocked
+		endMovePlayer:
+		store playerPos, r0 
 	
-	;takes r0 = new pos
-	load r1, playerPrevPos; takes r1 = prev sos
+		;takes r0 = new pos
+		load r1, playerPrevPos; takes r1 = prev sos
 
-	call MoveInMemory ; 
+		call MoveInMemory ; 
 	
-	call SetIndexChanged
-	mov r0, r1
-	call SetIndexChanged
+		call SetIndexChanged
+		mov r0, r1
+		call SetIndexChanged
 
-	MovePlayerUiSlip:
+	MovePlayer_moveBlocked:
+
+	MovePlayerUiSkip:
 	pop r3
 	pop r2
 	pop r1
@@ -1062,8 +1098,8 @@ RLEDecoder:   ; (r0 <- <r1>)
 	pop r0
 	rts
 
-IndirectCall:  ; <Function Address>
-    push r0
+IndirectCall:  ; <r7 = Function Address>
+    push r7
     rts
 
 ;TODO:
@@ -1631,7 +1667,10 @@ UISelectedInteractibleElementInteract: ; <UIElement>
 		add r2, r2, r0
 		loadi r0, r2 ; Function
 
+		push r7
+		mov r7, r0
 		call IndirectCall  ; Call Function
+		pop r7
 	
 	pop r2
 	pop r1
@@ -1702,19 +1741,19 @@ UIDrawToBuffer:   ; <StartIndex, UIElemenent_RLE>
 
 UIHandeler:
 
-	push r0
+	push r7
 	push r1
 
-	loadn r0, #0
+	loadn r7, #0
 	load r1, ISUIActive
-	cmp r0, r1
+	cmp r7, r1
 	jeq UIHandeler_notActive
 
 	; UI is active
 
-		load r0, UIStackPointer 
-		loadi r0, r0 ; Ui element addres
-		loadi r0, r0 ; UIFunction
+		load r7, UIStackPointer 
+		loadi r7, r7 ; Ui element addres
+		loadi r7, r7 ; UIFunction
 
 		call IndirectCall
 
@@ -1723,12 +1762,12 @@ UIHandeler:
 	UIHandeler_notActive:
 
 		; if input is esc
-			load r0, InputedChar
+			load r7, InputedChar
 			loadn r1, #27 ; ESC
-			cmp r0, r1
+			cmp r7, r1
 			jne UIHandeler_ESCUIcall
 
-			loadn r0, #UIConfirmationPrompt
+			loadn r7, #UIConfirmationPrompt
 			call UICall
 
 			UIHandeler_ESCUIcall:
@@ -1736,7 +1775,7 @@ UIHandeler:
 	UIHandler_exit:
 
 	pop r1
-	pop r0
+	pop r7
 
 	rts
 
@@ -1772,7 +1811,6 @@ LoadGameObjects: ; Must be inserted in LoadStage
 
 		rts
 
-
 	CallBehaviorBackground:   ;  Ticks all behaviors of Background in level
 
 
@@ -1785,6 +1823,11 @@ LoadGameObjects: ; Must be inserted in LoadStage
 		; Conveyour Belt
 
 	; Prop Functions 
+
+		; zero and Space
+
+			DoNothing:
+				rts
 
 		; Wall
 
@@ -1811,8 +1854,9 @@ LoadGameObjects: ; Must be inserted in LoadStage
 				;r0, new position
 				;r1, previous position
 
-
-				; if new position has box, push box
+				loadn r6, #0
+				store moveBlocked, r6
+				
 				
 				load r6, currentPropLayer
 				add r2, r6, r0 ; memory addres of r0 position in propLayer
@@ -1901,23 +1945,20 @@ LoadGameObjects: ; Must be inserted in LoadStage
 					; if new position has Wall
 				
 					load r6, currentPropLayer
-					add r2, r6, r0 ; memory addres of r0 position in propLayer
+					add r2, r6, r0 ; memory address of r0 position in propLayer
 
-					loadi r4, r2
-					loadn r3, #'#'
-					cmp r4, r3
-					jne checkPushMovement_continue
+					loadi r4, r2  ; char in address of r0  in propLayer
 
-						loadn r3, #1
-						store moveBlocked, r3 ; <--- Você pode querer armazenar moveBlocked aqui
+					loadn r3, #BehaviorJumpDict
+					add r3, r3, r4
 
-						jmp checkPushMovement_handleRecursion
+					push r0
+					push r7
+					loadi r7, r3
+					call IndirectCall  ; Execute the Function of the next position
+					pop r7
+					pop r0
 
-					checkPushMovement_continue:
-
-						call checkPushMovement
-					
-					checkPushMovement_handleRecursion: 
 					
 					;if valid
 					load r3, moveBlocked
