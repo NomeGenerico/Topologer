@@ -10,6 +10,8 @@ This is a Sokoban-style puzzle game developed in assembly language for the ICMC-
 
 **Current Status**: Core gameplay systems implemented including player movement, box pushing, layered rendering, and a complete UI framework.
 
+([Video Explicando](https://youtu.be/GGOwl66_xmA))
+
 ---
 
 ## Architecture Overview
