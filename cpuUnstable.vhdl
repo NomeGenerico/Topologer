@@ -146,7 +146,7 @@ process(clk, reset)
    variable DecSP         : std_LOGIC;
    variable LoadFR      : std_LOGIC;
 
-   -- Selecao dos Mux 2, 3, 4, 5, 6
+   -- Selecao dos Mux 2, 3, 5, 6
    variable selM2       : STD_LOGIC_VECTOR(2 downto 0);
    variable selM3       : integer;
 	variable selM5       : integer;
@@ -612,8 +612,10 @@ begin
          IF(IR(15 DOWNTO 10) = STORE) THEN
 
 				M1 <= MAR;
-				selM3 := RX;
-				selM5 := sRegs;
+				--selM3 := RX;
+				--selM5 := sRegs;
+				M3 := Reg(RX);
+				M5 <= M3;
 				RW <= '1';
             state := fetch;
          END IF;
