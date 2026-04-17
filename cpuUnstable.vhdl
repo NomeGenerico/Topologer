@@ -393,7 +393,14 @@ begin
 -- LOAD Indexado por registrador          RX <- M(RY)
 --========================================================================
          IF(IR(15 DOWNTO 10) = LOADINDEX) THEN
-
+				--selM4 := RX;
+				--selM1 := M4;
+				M4 := Reg(RY);
+				M1 <= M4;
+				RW <= '0';
+				selM2 := sMem;
+				LoadReg(RX) := '1';
+				--IncPc := '1'
             state := fetch;
          END IF;
 
@@ -401,7 +408,14 @@ begin
 -- STORE indexado por registrador          M[RX] <- RY
 --========================================================================
          IF(IR(15 DOWNTO 10) = STOREINDEX) THEN
-
+				--selM4 := RX;
+				--selM1 := M4;
+				M3 := Reg(RY);
+				M5 <= M3;
+				M4 := Reg(RX);
+				M1 <= M4;
+				RW <= '1';
+				--IncPc := '1'
             state := fetch;
          END IF;
 
@@ -416,17 +430,46 @@ begin
 -- MOV SP RX    SP <- RX         Format: < inst(6) | RX(3) | xxx | xx | 11 >
 
 --========================================================================
-         IF(IR(15 DOWNTO 10) = MOV) THEN
+         IF((IR(15 DOWNTO 10) = MOV) and (IR(0) = '0')) THEN
 
-
+				M4 := Reg(RY);
+				selM2 := sM4;
+				LoadReg(RX) := '1';
             state := fetch;
+				
+			END IF;	
+			
+			IF((IR(15 DOWNTO 10) = MOV) and (IR(1 DOWNTO 0) = "01")) THEN
+
+				selM2 := sSP;
+				LoadReg(RX) := '1';
+            state := fetch;
+				
+			END IF;
+				
+			IF((IR(15 DOWNTO 10) = MOV) and (IR(1 DOWNTO 0) = "11")) THEN
+				
+				M4 := Reg(RX);
+				LoadSP := '1';
+            state := fetch;	
+				
          END IF;
 
 --========================================================================
 -- ARITH OPERATION ('INC' NOT INCLUDED)          RX <- RY (?) RZ
 --========================================================================
          IF(IR(15 DOWNTO 14) = ARITH AND IR(13 DOWNTO 10) /= INC) THEN
-
+				
+				M3 := Reg(RY);
+				M4 := Reg(RZ);
+				X <= M3;
+				y <= M4;
+				OP(5 DOWNTo 0) <= IR(15 Downto 10);
+				OP(6) <= IR(0);
+				selM2 := sULA;
+				LoadReg(RX) := '1';
+				selM6 := sULA;
+				LoadFr := '1';
             state := fetch;
          END IF;
 
@@ -434,9 +477,21 @@ begin
 -- INC/DEC         RX <- RX (+ or -) 1
 --========================================================================
          IF(IR(15 DOWNTO 14) = ARITH AND (IR(13 DOWNTO 10) = INC))   THEN
-
+				--M4 := Reg(RX);
+				--M3 := "0000000000000001";
+				--OP <= ADD;
+				--selM2 := sULA;
+				--LoadReg(RX) := '1';
             state := fetch;
          END IF;
+			IF(IR(15 DOWNTO 14) = ARITH AND (IR(13 DOWNTO 10) = INC))   THEN
+				--M4 := Reg(RX);
+				--M3 := "0000000000000001";
+				--OP := SUB; Needs to be changed
+				--selM2 := sULA;
+				--LoadReg(RX) := '1';
+            state := fetch;
+			 END IF;
 
 --========================================================================
 -- LOGIC OPERATION ('SHIFT', and 'CMP'  NOT INCLUDED)           RX <- RY (?) RZ
