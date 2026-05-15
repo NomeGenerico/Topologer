@@ -102,6 +102,11 @@ ARCHITECTURE main of cpu is
    CONSTANT sM4      : STD_LOGIC_VECTOR (2 downto 0) := "010";
    CONSTANT sTECLADO   : STD_LOGIC_VECTOR (2 downto 0) := "011"; -- nao tinha
    CONSTANT sSP      : STD_LOGIC_VECTOR (2 downto 0) := "100";
+	
+   -- CONSTANTes para controle do Mux5: Estes sinais selecionam as respectivas entradas para o Mux2
+   CONSTANT sRegs    : integer := 0;
+   CONSTANT sPC      : integer := 1;
+
 
 
    -- Sinais para o Processo da ULA
@@ -141,8 +146,10 @@ process(clk, reset)
    variable DecSP         : std_LOGIC;
    variable LoadFR      : std_LOGIC;
 
-   -- Selecao dos Mux 2 e 6
+   -- Selecao dos Mux 2, 3, 5, 6
    variable selM2       : STD_LOGIC_VECTOR(2 downto 0);
+   variable selM3       : integer;
+	variable selM5       : integer;
    variable selM6       : STD_LOGIC_VECTOR(2 downto 0);
 
    VARIABLE BreakFlag   : STD_LOGIC;  -- Para sinalizar a mudanca para Clock manual/Clock Automatico para  a nova instrucao Break
@@ -244,6 +251,15 @@ begin
       ELSIF (selM2 = sM4)       THEN M2 := M4;
       ELSIF (selM2 = sTECLADO)THEN M2 := TECLADO;
       ELSIF (selM2 = sSP)       THEN M2 := SP;
+      END IF;
+		
+		-- Selecao do Mux3
+      if ((selM3 < 8) AND (selM3 >= 0))       THEN M3 := REG(selM3);
+      END IF;
+		
+		-- Selecao do Mux5
+      if (selM5 = sRegs)        THEN M5 <= M3;
+		ELSIF (selM5 = sPC)       THEN M5 <= PC;
       END IF;
 
       -- Carrega dados do Mux 2 para os registradores
@@ -366,7 +382,10 @@ begin
 -- STORE   DIReto         M[END] <- RX
 --========================================================================
          IF(IR(15 DOWNTO 10) = STORE) THEN  -- Busca o endereco
-
+				M1 <= PC;
+				RW <= '0';
+				LoadMAR := '1';
+				IncPc := '1';
             state := exec;  -- Vai para o estado de Executa para gravar Registrador no endereco
          END IF;
 
@@ -374,7 +393,14 @@ begin
 -- LOAD Indexado por registrador          RX <- M(RY)
 --========================================================================
          IF(IR(15 DOWNTO 10) = LOADINDEX) THEN
-
+				--selM4 := RX;
+				--selM1 := M4;
+				M4 := Reg(RY);
+				M1 <= M4;
+				RW <= '0';
+				selM2 := sMem;
+				LoadReg(RX) := '1';
+				--IncPc := '1'
             state := fetch;
          END IF;
 
@@ -382,7 +408,14 @@ begin
 -- STORE indexado por registrador          M[RX] <- RY
 --========================================================================
          IF(IR(15 DOWNTO 10) = STOREINDEX) THEN
-
+				--selM4 := RX;
+				--selM1 := M4;
+				M3 := Reg(RY);
+				M5 <= M3;
+				M4 := Reg(RX);
+				M1 <= M4;
+				RW <= '1';
+				--IncPc := '1'
             state := fetch;
          END IF;
 
@@ -397,33 +430,107 @@ begin
 -- MOV SP RX    SP <- RX         Format: < inst(6) | RX(3) | xxx | xx | 11 >
 
 --========================================================================
-         IF(IR(15 DOWNTO 10) = MOV) THEN
+         IF((IR(15 DOWNTO 10) = MOV) and (IR(0) = '0')) THEN
 
-
+				M4 := Reg(RY);
+				selM2 := sM4;
+				LoadReg(RX) := '1';
             state := fetch;
+				
+			END IF;	
+			
+			IF((IR(15 DOWNTO 10) = MOV) and (IR(1 DOWNTO 0) = "01")) THEN
+
+				selM2 := sSP;
+				LoadReg(RX) := '1';
+            state := fetch;
+				
+			END IF;
+				
+			IF((IR(15 DOWNTO 10) = MOV) and (IR(1 DOWNTO 0) = "11")) THEN
+				
+				M4 := Reg(RX);
+				LoadSP := '1';
+            state := fetch;	
+				
          END IF;
 
 --========================================================================
 -- ARITH OPERATION ('INC' NOT INCLUDED)          RX <- RY (?) RZ
 --========================================================================
          IF(IR(15 DOWNTO 14) = ARITH AND IR(13 DOWNTO 10) /= INC) THEN
-
+				
+				M3 := Reg(RY);
+				M4 := Reg(RZ);
+				
+				x <= M3;
+				y <= M4;
+				
+				OP(5 DOWNTO 0) <= IR(15 DOWNTO 10);
+				OP(6) <= IR(0);
+				selM2 := sULA;
+				
+				loadReg(RX) := '1';
+				SelM6 := sULA;
+				loadFR := '1';
+				
             state := fetch;
          END IF;
 
 --========================================================================
 -- INC/DEC         RX <- RX (+ or -) 1
 --========================================================================
+
+      --IF (OP (5 downto 4) = ARITH) THEN
+      --   CASE OP (3 downto 0) IS
+
+
          IF(IR(15 DOWNTO 14) = ARITH AND (IR(13 DOWNTO 10) = INC))   THEN
 
+            M3 := Reg(RX);
+				M4 := "0000000000000001";
+				
+				x <= M3;
+				y <= M4;
+				
+				OP(6) <= '0';	
+				OP(5 DOWNTO 4) <= ARITH ;
+				
+				if (IR(6) = '0' ) THEN 
+					OP(3 DOWNTO 0) <= ADD;
+				else 
+					OP(3 DOWNTO 0) <= SUB;
+				end if;
+			
+				selM2 := sULA;
+				loadReg(RX) := '1';
+				SelM6 := sULA;
+				loadFR := '1';
+				
             state := fetch;
+				
          END IF;
+
 
 --========================================================================
 -- LOGIC OPERATION ('SHIFT', and 'CMP'  NOT INCLUDED)           RX <- RY (?) RZ
 --========================================================================
          IF(IR(15 DOWNTO 14) = LOGIC AND IR(13 DOWNTO 10) /= SHIFT AND IR(13 DOWNTO 10) /= CMP) THEN
-
+		
+				M3 := Reg(RY);
+				M4 := Reg(RZ);
+				
+				x <= M3;
+				y <= M4;
+				
+				OP(5 DOWNTO 0) <= IR(15 DOWNTO 10);
+				OP(6) <= IR(0);
+				selM2 := sULA;
+				
+				loadReg(RX) := '1';
+				SelM6 := sULA;
+				loadFR := '1';
+				
             state := fetch;
          END IF;
 
@@ -454,7 +561,19 @@ begin
 -- CMP      RX, RY
 --========================================================================
          IF(IR(15 DOWNTO 14) = LOGIC AND IR(13 DOWNTO 10) = CMP) THEN
-
+						
+				M3 := Reg(RX);
+				M4 := Reg(RY);
+				
+				x <= M3;
+				y <= M4;
+				
+				OP(5 DOWNTO 0) <= IR(15 DOWNTO 10);
+				OP(6) <= '0';
+				
+				SelM6 := sULA;
+				loadFR := '1';
+				
             state := fetch;
          END IF;
 
@@ -592,6 +711,12 @@ begin
 --========================================================================
          IF(IR(15 DOWNTO 10) = STORE) THEN
 
+				M1 <= MAR;
+				--selM3 := RX;
+				--selM5 := sRegs;
+				M3 := Reg(RX);
+				M5 <= M3;
+				RW <= '1';
             state := fetch;
          END IF;
 
@@ -672,7 +797,8 @@ BEGIN
 
    IF (reset = '1') THEN
       auxFR <= x"0000";
-      RESULT <= x"0000";
+      
+		RESULT <= x"0000";
    else
       auxFR <= FR;
 
